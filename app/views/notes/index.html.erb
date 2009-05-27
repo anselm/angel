@@ -20,15 +20,11 @@
     <td><%=h note.title %></td>
     <td><%=h note.link %></td>
     <td><%=h note.description %></td>
-	<td><%=h note.lat %></td>
-	<td><%=h note.lon %></td>
-    <td><%= link_to 'Show', note %></td>
-    <td><%= link_to 'Edit', edit_note_path(note) %></td>
-    <td><%= link_to 'Destroy', note, :confirm => 'Are you sure?', :method => :delete %></td>
+    <td><%=h note.lat %></td>
+    <td><%=h note.lon %></td>
   </tr>
 <% end %>
 </table>
 
 <br />
 
-<%= link_to 'New note', new_note_path %>
