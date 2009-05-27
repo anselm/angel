@@ -1,0 +1,18 @@
+<p>
+  <b>Title:</b>
+  <%=h @note.title %>
+</p>
+
+<p>
+  <b>Link:</b>
+  <%=h @note.link %>
+</p>
+
+<p>
+  <b>Description:</b>
+  <%=h @note.description %>
+</p>
+
+
+<%= link_to 'Edit', edit_note_path(@note) %> |
+<%= link_to 'Back', notes_path %>

@@ -1,0 +1,14 @@
+<%= form.label :email %><br />
+<%= form.text_field :email %><br />
+<%= form.label :firstname %><br />
+<%= form.text_field :firstname %><br />
+<%= form.label :lastname %><br />
+<%= form.text_field :lastname %><br />
+<br />
+<%= form.label :password, form.object.new_record? ? nil : "Change password" %><br />
+<%= form.password_field :password %><br />
+<br />
+<%= form.label :password_confirmation %><br />
+<%= form.password_field :password_confirmation %><br />
+<%= form.label :photo %><br />
+<%= form.file_field :photo %>

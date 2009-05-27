@@ -1,0 +1,34 @@
+<%= @map.body() %>
+
+<h1>Search Filter</h1>
+<form>
+<input name="q"/>
+<input type=submit value="search!"/>
+</form>
+
+<h1>Results</h1>
+
+<table>
+  <tr>
+    <th>Title</th>
+    <th>Link</th>
+    <th>Description</th>
+  </tr>
+
+<% @notes.each do |note| %>
+  <tr>
+    <td><%=h note.title %></td>
+    <td><%=h note.link %></td>
+    <td><%=h note.description %></td>
+	<td><%=h note.lat %></td>
+	<td><%=h note.lon %></td>
+    <td><%= link_to 'Show', note %></td>
+    <td><%= link_to 'Edit', edit_note_path(note) %></td>
+    <td><%= link_to 'Destroy', note, :confirm => 'Are you sure?', :method => :delete %></td>
+  </tr>
+<% end %>
+</table>
+
+<br />
+
+<%= link_to 'New note', new_note_path %>
