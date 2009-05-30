@@ -32,16 +32,15 @@ class Dynamapper
   #
   # initialize()
   # 
-  def initialize(apikey)
-    @apikey = apikey
+  def initialize(args = {})
+    @apikey = args[:apikey]
     @map_cover_all_points = true
-    @lat = 45.516510
-    @lon = -122.678878
-    @width = "100%"
-    @height = "340px"
-    @zoom = 9 
+    @lat = args[:latitude] || 45.516510
+    @lon = args[:longitude] || -122.678878
+    @width = args[:width] || "100%"
+    @height = args[:height] || "340px"
+    @zoom = args[:zoom] || 9 
     @map_type = "G_SATELLITE_MAP"
-    # an array of hashes of google maps features 
     @features = []
   end
 

@@ -17,11 +17,12 @@ class NotesController < ApplicationController
     return true 
   end
 
-  # GET /notes
-  # GET /notes.xml
-  def index
+  def update
+    @results = TwitterSupport.consume
+  end
 
-    @notes = Note.find(:all, :order => 'begins DESC', :limit => 50 )
+  def index
+    @notes = TwitterSupport::query(params[:q])
     @notes.each do |item|
         @map.feature( {
           :title => "#{item.title} #{item.description}",
@@ -31,15 +32,12 @@ class NotesController < ApplicationController
         }
      )
     end
-
     respond_to do |format|
       format.html # index.html.erb
       format.xml  { render :xml => @notes }
     end
   end
 
-  # GET /notes/1
-  # GET /notes/1.xml
   def show
     @note = Note.find(params[:id])
     respond_to do |format|
@@ -48,8 +46,6 @@ class NotesController < ApplicationController
     end
   end
 
-  # GET /notes/new
-  # GET /notes/new.xml
   def new
     @note = Note.new
     respond_to do |format|
@@ -58,13 +54,10 @@ class NotesController < ApplicationController
     end
   end
 
-  # GET /notes/1/edit
   def edit
     @note = Note.find(params[:id])
   end
 
-  # POST /notes
-  # POST /notes.xml
   def create
     @note = Note.new(params[:note])
     respond_to do |format|
@@ -79,8 +72,6 @@ class NotesController < ApplicationController
     end
   end
 
-  # PUT /notes/1
-  # PUT /notes/1.xml
   def update
     @note = Note.find(params[:id])
     respond_to do |format|
@@ -95,8 +86,6 @@ class NotesController < ApplicationController
     end
   end
 
-  # DELETE /notes/1
-  # DELETE /notes/1.xml
   def destroy
     @note = Note.find(params[:id])
     @note.destroy
@@ -104,27 +93,6 @@ class NotesController < ApplicationController
       format.html { redirect_to(notes_url) }
       format.xml  { head :ok }
     end
-  end
-
-  # Search
-  def search
-     @term = params[:id]
-     @notes = nil
-     # @notes = Note.find_by_solr(@term)
-     # @notes = @notes.docs if @notes
-	 @notes = Note.search(@term)
-     @notes = [] if !@notes
-  end
-
-  # Update
-  def update
-
-	@results = TwitterSupport.consume
-
-    # get some posts from twitter
-    # store them in our database if new
-    # parts of speech tagging
-    # geolocation
   end
 
 end

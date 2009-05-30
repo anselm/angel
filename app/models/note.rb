@@ -234,14 +234,15 @@ end
 class Digger
 
   SEARCH_LIMIT = 19
-  
+
   def search(for_text)
     @search_params = for_text.to_s.words
     wrds = []
     @search_params.each { |param| wrds << "stem = '#{param}'" }
     return [] if wrds.length < 1
     word_sql = "select * from words where #{wrds.join(" or ")}"
-    @search_words = repository(:default).adapter.query(word_sql)
+    #@search_words = repository(:default).adapter.query(word_sql)
+	@search_words = Word.connection.execute(word_sql)
     tables, joins, ids = [], [], []
     posns = []
     @search_words.each_with_index { |w, index|
@@ -264,7 +265,8 @@ class Digger
 
   def frequency_ranking
     freq_sql= "select loc0.note_id, count(loc0.note_id) as count #{@common_select} order by count desc"
-    list = repository(:default).adapter.query(freq_sql)
+    #list = repository(:default).adapter.query(freq_sql)
+	list = Transit.connection.execute(word_sql)
     rank = {}
     list.size.times { |i| rank[list[i].note_id] = list[i].count.to_f/list[0].count.to_f }
     return rank
@@ -274,24 +276,24 @@ class Digger
     total = []
     @search_words.each_with_index { |w, index| total << "loc#{index}.position + 1" }
     loc_sql = "select loc0.note_id, (#{total.join(' + ')}) as total #{@common_select} order by total asc"
-    list = repository(:default).adapter.query(loc_sql)
+    #list = repository(:default).adapter.query(loc_sql)
     rank = {}
     list.size.times { |i| rank[list[i].note_id] = list[0].total.to_f/list[i].total.to_f }
     return rank
   end
-  
+
   def distance_ranking
     return {} if @search_words.size == 1
     dist, total = [], []
     @search_words.each_with_index { |w, index| total << "loc#{index}.position" }
     total.size.times { |index| dist << "abs(#{total[index]} - #{total[index + 1]})" unless index == total.size - 1 }
     dist_sql = "select loc0.note_id, (#{dist.join(' + ')}) as dist #{@common_select} order by dist asc"
-    list = repository(:default).adapter.query(dist_sql)
+    #list = repository(:default).adapter.query(dist_sql)
     rank = Hash.new
     list.size.times { |i| rank[list[i].note_id] = list[0].dist.to_f/list[i].dist.to_f }
     return rank
   end
-  
+
   def merge_rankings(*rankings)
     r = {}
     rankings.each { |ranking| r.merge!(ranking) { |key, oldval, newval| oldval + newval} }

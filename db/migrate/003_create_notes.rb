@@ -9,7 +9,8 @@ class CreateNotes < ActiveRecord::Migration
 
       t.integer  :permissions
 	  t.integer  :statebits
-      t.integer  :owner_id
+      t.integer  :owner_id   # party that made this
+	  t.integer  :related_id  # a relationship of child parent such as a reply in a tree of messages
       t.integer  :depth
       t.integer  :score
 

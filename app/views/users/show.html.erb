@@ -1,4 +1,4 @@
-<h2><%= @user.firstname.capitalize + " " + @user.lastname.capitalize %></h2>
+<h2><%= @user.login %></h2>
 <% if @user.photo.exists? then %>
 <%= image_tag @user.photo.url(:small) %><br/>
 <% else %>

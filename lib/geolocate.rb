@@ -9,6 +9,7 @@ require 'json'
 class Geolocate
 
   def self.geolocate_via_metacarta(text,name,password,key)
+    return 0,0 if !text
     text = URI.escape(text, Regexp.new("[^#{URI::PATTERN::UNRESERVED}]"))
     host = "ondemand.metacarta.com"
     path = "/webservices/GeoTagger/JSON/basic?version=1.0.0&doc=#{text}"
@@ -32,7 +33,7 @@ class Geolocate
   end
 
   def self.geolocate_via_placemaker(apikey,text)
-puts "and geolocating #{text}"
+    return 0,0 if !text
     url = URI.parse('http://wherein.yahooapis.com/v1/document')
     args = {'documentContent'=> text,
             'documentType'=>'text/plain',

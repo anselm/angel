@@ -9,6 +9,10 @@
 </head>
 <body>
 <div style="float:right">
+<form style="display:inline; padding:0; margin:0;">
+<input type="text" name="q" size="60">
+<input type="submit" value="search">
+</form> 
 <%= link_to "Home", "/" %> |
 <% if !current_user %>
   <%= link_to "Register", new_account_path %> |
