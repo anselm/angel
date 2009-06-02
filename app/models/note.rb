@@ -30,7 +30,11 @@ end
 
 class Note < ActiveRecord::Base
   has_many :relations
-  #  acts_as_solr( :fields => [:title, :link, :description ] ) ... disabled for now...
+
+  acts_as_solr( :fields => [:title, :link, :description, {:lat=>:range_float}, {:lon=>range_float}]
+               # , :facets=>[:brand,:resolution]
+				)
+
   KIND_NULL = "null"
   KIND_USER = "user"
   KIND_POST = "post"
@@ -39,6 +43,8 @@ class Note < ActiveRecord::Base
   STATEBITS_RESPONDED = 1
   STATEBITS_UNRESPONDED = 2
   STATEBITS_FRIENDED = 4
+  STATEBITS_DIRTY = 8
+  STATEBITS_GEOLOCATED = 16
 end
 
 

@@ -8,8 +8,9 @@ require 'json'
 
 class Geolocate
 
+  # return latitude,longitude,kilometers or return a point off the coast of africa that means nil
   def self.geolocate_via_metacarta(text,name,password,key)
-    return 0,0 if !text
+    return 0,0,0 if !text
     text = URI.escape(text, Regexp.new("[^#{URI::PATTERN::UNRESERVED}]"))
     host = "ondemand.metacarta.com"
     path = "/webservices/GeoTagger/JSON/basic?version=1.0.0&doc=#{text}"
@@ -24,16 +25,17 @@ class Geolocate
         data = JSON.parse(response.body.to_s)
         lat = data["Locations"][0]["Centroid"]["Latitude"]
         lon = data["Locations"][0]["Centroid"]["Longitude"]
-        return lat,lon
+        return lat,lon,25
       end
     rescue Timeout::Error
     rescue
     end
-    return 0,0
+    return 0,0,0
   end
 
+  # return latitude,longitude,kilometers or return a point off the coast of africa that means nil
   def self.geolocate_via_placemaker(apikey,text)
-    return 0,0 if !text
+    return 0,0,0 if !text
     url = URI.parse('http://wherein.yahooapis.com/v1/document')
     args = {'documentContent'=> text,
             'documentType'=>'text/plain',
@@ -48,11 +50,11 @@ class Geolocate
         (doc/:centroid).each do |node|
           lat = (node/:latitude).innerHTML
 	      lon = (node/:longitude).innerHTML
-	      return lat,lon
+	      return lat,lon,25
 	    end
 	  end
 	end
-    return 0,0
+    return 0,0,0
   end
 
 end
