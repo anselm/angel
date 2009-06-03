@@ -17,7 +17,7 @@ class TwitterSupport
 	###########################################################################################
 
 	def self.url_escape(string)
-		string.gsub(/([^ a-zA-Z0-9_-]+)/n) do
+		string.gsub(/([^a-zA-Z0-9_-]+)/n) do
 			'%' + $1.unpack('H2' * $1.size).join('%').upcase
 		end.tr(' ', '%20')
 	end
@@ -35,7 +35,7 @@ class TwitterSupport
 	end
 
 	def self.geolocate_all
-		all = Note.find_by_sql("select * from notes where !(statebits & #{Note::STATEBITS_GEOLOCATED)}")
+		all = Note.find_by_sql("select * from notes where !(statebits & #{Note::STATEBITS_GEOLOCATED})")
 		all.each do |note|
 			lat,lon,rad = self.geolocate(note.location)
 			if lat < 0 || lat > 0 || lon < 0 || lon > 0
@@ -101,8 +101,8 @@ class TwitterSupport
 		terms = names.collect { |n| "id='#{n}'" }
 		yql = "http://query.yahooapis.com/v1/public/yql?q="
 		schema = "use 'http://angel.makerlab.org/yql/twitter.user.profile.xml' as party;"
-		query = "select * from party where id = \"#{terms.join(' or ')}\""
-		fragment = "#{schema};#{query}"
+		query = "select * from party where id = #{terms.join(' or ')}"
+		fragment = "#{schema}#{query}"
 		url = "#{yql}#{url_escape(fragment)};&format=json"
 		#response = Hpricot.XML(open(url))
 		#response_name = response.innerHTML.strip
@@ -151,7 +151,7 @@ class TwitterSupport
 		parties.each do |party|
 			next if party.updated_at > old
 			puts "rate limit is at #{limit}"
-			puts "decided to update this user because #{party.updated_at}"
+			puts "decided to update this user because #{party.updated_at} is not > #{old}"
 			limit -= 1
 			puts "oh oh rate limit exceeded" if limit < 1
 			break if limit < 1
@@ -225,11 +225,12 @@ class TwitterSupport
 	# TODO can we only get results newer than x
 	# TODO can we do without a specific term?
 	# TODO rate limit
+	# TODO use supplied radius when confident
 	##########################################################################################################
 
 	def self.twitter_search(terms,lat,lon,rad)
 		results = []
-		Twitter::Search.new(terms.join(' ')).geocode(lat,lon,rad).each do |twit|
+		Twitter::Search.new(terms.join(' ')).geocode(lat,lon,"25mi").each do |twit|
 			# build a model of the participants...
 			party = self.save_party(
 						:provenance => "twitter",
@@ -311,9 +312,8 @@ class TwitterSupport
 		since_id = last.id if last
 
 		results = []
-		list = twitter.user_timeline(:user_id=>partyid,:count=>200,:since_id=>since_id)
+		list = twitter.user_timeline(:user_id=>partyid,:count=>200,:since_id=>since_id)  # other options: max_id, #page, #since
 
-		Options: since_id, max_id, count, page, since 
 		list.each do |twit|
 			puts "timeline - got a message #{twit.text}"
 			results << self.save_post(party,
@@ -341,7 +341,7 @@ class TwitterSupport
 		yql = "http://query.yahooapis.com/v1/public/yql?q="
 		schema = "use 'http://www.javarants.com/friendfeed/friendfeed.feeds.xml' as ff;"
 		query = "select * from ff where nickname='#{partyname}' and service='twitter';"
-		fragment = "#{schema};#{query}"
+		fragment = "#{schema}#{query}"
 		url = "#{yql}#{url_escape(fragment)}" # is ignored why? ;&format=json"
 		response = Hpricot.XML(open(url))
 		response_name = response.innerHTML.strip
@@ -352,18 +352,63 @@ class TwitterSupport
 	# yql get the timelines of a pile of people - this is a crude way of seeing somebodys own view of reality
 	# could also do other stuff too like
 	# use 'http://angel.makerlab.org/yql/twitter.user.timeline.xml' as party;select * from party where id = 'anselm' and title like '%humanist%';
+	# TODO use more recent than 
+	# TODO yahoo api rate limits
 	##########################################################################################################
 
 	def self.yql_twitter_get_timelines(parties)
 		terms = parties.collect { |n| "id='#{n.title}'" }
 		yql = "http://query.yahooapis.com/v1/public/yql?q="
 		schema = "use 'http://angel.makerlab.org/yql/twitter.user.timeline.xml' as party;"
-		query = "select * from party where \"#{terms.join(' or ')}\""
-		fragment = "#{schema};#{query}"
+		query = "select * from party where #{terms.join(' or ')}"
+		fragment = "#{schema}#{query}"
 		url = "#{yql}#{url_escape(fragment)};&format=json"
 		#response = Hpricot.XML(open(url))
-		#response_name = response.innerHTML.strip
 		response = open(url).read
+		blob = JSON.parse(response)
+
+		count = blob["query"]["count"].to_i
+		blob["query"]["results"]["entry"].each do |goop|
+			#uuid = goop["id"]  # such as "tag:twitter.com,2007:http://twitter.com/anselm/statuses/2012363905"
+			title = goop["title"]  # such as "anselm: blah blah blah "
+			begins = goop["published"] # such as "2009-06-03T03:31:11+00:00"
+			link = goop["link"][0]["href"]  # the link to the post
+
+			# tearing apart the url seems a reasonably stable way to get at info that should have been sent by itself
+			fragments = link.split("/")
+			uuid = fragments[5]
+			partyname = fragments[3]
+
+			# also clean up this mess from "anselm: blah blah blah" to just "blah blah blah"
+			title = title[(partyname.length+2)..-1]
+
+			# clean up time
+			begins = Time.parse(begins)
+
+			# find the party from OUR list
+			party = nil
+			parties.each do |temp|
+				if temp.title == partyname
+					party = temp
+					break
+				end
+			end
+			if party == nil
+				puts "argh cannot find name #{partyname}"
+				return
+			end
+
+			# save the post
+			self.save_post(party,{
+					:provenance => "twitter",
+					:uuid => uuid,
+					:title => title,
+					:location => party.location,
+					:begins => begins
+					})
+
+		end
+
 	end
 
 	##########################################################################################################
@@ -388,6 +433,8 @@ class TwitterSupport
 						:kind => kind
 						 })
 
+		puts "Attempting to save a new party with title #{title}"
+
 		# set this later
 		lat,lon,rad = 0,0,0
 
@@ -407,7 +454,7 @@ class TwitterSupport
 				)
 			party.save
 		else
-			party.update_attributes(:title => title, :description => description );
+			party.update_attributes(:title => title, :description => description, :updated_at => Time.now );
 			if lat < 0 || lat > 0 || lon < 0 || lon > 0
 				party.update_attributes(:lat => lat, :lon => lon )
 			end
@@ -429,7 +476,7 @@ class TwitterSupport
 		title = args[:title]
 		location = args[:location]
 		description = args[:description]
-		last_login_at = args[:begins]
+		#last_login_at = args[:begins]
 		begins = args[:begins]
 
 		# We build a model of accumulated posts but don't store posts twice
@@ -439,15 +486,20 @@ class TwitterSupport
 						:kind => kind
 						 })
 
-		return "Note already found #{args[:id]} #{args[:text]}" if note
+		if note
+			puts "Note already found #{uuid} #{title}"
+			return "Note already found #{uuid} #{title}"
+		end
 
 		# set this later
 		lat,lon,rad = 0,0,0
 
+		puts "Attempting to save a new post with title #{title}"
+
 		# Save the note, tags, and relationships between everything
-		begin
+		# turn of assertion catching because there's no point to silently failing.
+		#begin
 		  Note.transaction do
-puts "post saving #{text}"
 			note = Note.new(
 				:kind => kind,
 				:uuid => uuid,
@@ -469,16 +521,15 @@ puts "post saving #{text}"
 			note.relation_add(Relation::RELATION_OWNER,party.id)
 
 			# build a relationship to hash tags
-			args[:text].scan(/#[a-zA-Z]+/).each do |tag|
+			args[:title].scan(/#[a-zA-Z]+/).each do |tag|
 				note.relation_add(Relation::RELATION_TAG,tag[1..-1])
 			end
 
 		  end
-                rescue
-                  puts "badness"
-                end
-		return "note added #{noteid} #{text}"
-
+		#rescue
+		#	puts "badness - failed to save the post"
+		#end
+		return note
 	end
 
 	###########################################################################################
@@ -615,15 +666,18 @@ puts "post saving #{text}"
 	###########################################################################################
 
 	def self.query(phrase)
+
 		# tear apart query
 		q = self.query_parse(phrase)
 
-		# get time TODO implement
+		# get time
+		# TODO implement
 		begins = nil
 		ends = nil
 
 		# get bounds if any
-		lat,lon,rad = Geolocate.geolocate_via_metacarta(q[:places].join(' ')) if q[:places].length
+		lat,lon,rad = self.geolocate(q[:placenames].join(' ')) if q[:placenames].length
+		puts "query: geolocated the query itself to #{lat} #{lon}"
 
 		# did the user supply some people as the anchor of a search? refresh them if so ( this is not costly )
 		q[:parties] = self.twitter_get_parties(q[:partynames])
@@ -652,14 +706,18 @@ puts "post saving #{text}"
 				# in this strategy we talk to an intermediary like YQL and query on the set of friends for recent traffic.
 				# in this way we CAN do the query that we hope to do with friends_twitter
 				# we could also query on search terms if any and or apply a default search filter? like "help" and "i need"?
-				self.yql_twitter_get_timelines(parties)
+				puts "query: using a yql search for parties"
+				self.yql_twitter_get_timelines(q[:parties])
 			when "recent"
 				# in this strategy we look at the core members only and get their friends recent timelines.
 			end
 		else
 			# if there are no people to anchor the search then just let twitter do the search
+			puts "query: using a general search strategy looking for #{q[:words].join(' ')} near #{lat} #{lon} #{rad}"
 			self.twitter_search(q[:words],lat,lon,rad)
 		end
+
+ return []
 
 # todo
 #   test bitmasks
@@ -694,13 +752,12 @@ puts "post saving #{text}"
 		#	str = "lon:[0 TO 4] AND lat:[0 TO 4]"
 		#end
 
-		results = Note.find_by_solr(str,{
+		results = Note.find_by_solr(str,
 					:offset => 0,
 					:limit => 50,
 					#:scores => true,
 					:order => "id desc",
 					:operator => "and"
-					}
 					)
 		products = results.docs
 		total_hits = results.total_hits

@@ -31,9 +31,9 @@ end
 class Note < ActiveRecord::Base
   has_many :relations
 
-  acts_as_solr( :fields => [:title, :link, :description, {:lat=>:range_float}, {:lon=>range_float}]
-               # , :facets=>[:brand,:resolution]
-				)
+#  acts_as_solr( :fields => [:title, :link, :description, {:lat=>:range_float}, {:lon=>range_float}]
+#               # , :facets=>[:brand,:resolution]
+#				)
 
   KIND_NULL = "null"
   KIND_USER = "user"
