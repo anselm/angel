@@ -21,7 +21,6 @@ class Relation < ActiveRecord::Base
   RELATION_OWNER               = "owner"
 end
 
-
 ###########################################################################################################
 #
 # A base class used everywhere that allows relationships
@@ -30,11 +29,7 @@ end
 
 class Note < ActiveRecord::Base
   has_many :relations
-
-#  acts_as_solr( :fields => [:title, :link, :description, {:lat=>:range_float}, {:lon=>range_float}]
-#               # , :facets=>[:brand,:resolution]
-#				)
-
+  acts_as_solr( :fields => [:title, {:lat=>:range_float}, {:lon=>:range_float}] )
   KIND_NULL = "null"
   KIND_USER = "user"
   KIND_POST = "post"
@@ -44,9 +39,8 @@ class Note < ActiveRecord::Base
   STATEBITS_UNRESPONDED = 2
   STATEBITS_FRIENDED = 4
   STATEBITS_DIRTY = 8
-  STATEBITS_GEOLOCATED = 16
+  STATEBITS_GEOLOCATED = 16 
 end
-
 
 ###########################################################################################################
 #

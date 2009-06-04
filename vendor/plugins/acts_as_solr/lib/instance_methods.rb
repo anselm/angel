@@ -2,16 +2,6 @@ module ActsAsSolr #:nodoc:
   
   module InstanceMethods
 
-    def async_solr_save
-      return solr_save
-      #  SolrWorker.async_index_object(:object_type =&gt; self.class.name, :object_id =&gt; self.id)
-    end
- 
-    def async_solr_destroy
-      return solr_destroy
-      # SolrWorker.async_destroy_object_index(:object_type =&gt; self.class.name, :object_id =&gt; self.id)
-    end
-
     # Solr id is <class.name>:<id> to be unique across all models
     def solr_id
       "#{self.class.name}:#{record_id(self)}"

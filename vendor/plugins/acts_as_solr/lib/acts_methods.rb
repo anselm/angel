@@ -192,8 +192,8 @@ module ActsAsSolr #:nodoc:
       configuration[:solr_fields] = {}
       configuration[:solr_includes] = {}
       
-      after_save    :async_solr_save
-      after_destroy :async_solr_destroy
+      after_save    :solr_save
+      after_destroy :solr_destroy
 
       if configuration[:fields].respond_to?(:each)
         process_fields(configuration[:fields])

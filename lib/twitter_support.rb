@@ -31,6 +31,7 @@ class TwitterSupport
 		password = SETTINGS[:site_metacarta_pass]
 		key = SETTINGS[:site_metacarta_key]
 		lat,lon,rad = Geolocate.geolocate_via_metacarta(text,name,password,key)
+		ActionController::Base.logger.info "geolocator at work: #{text} set to #{lat} #{lon} #{rad}"
 		return lat,lon,rad
 	end
 
@@ -84,10 +85,48 @@ class TwitterSupport
 				)
 			blob = JSON.parse(response.read)
 			hits = blob['remaining_hits']
+			ActionController::Base.logger.info "rate limit is at #{hits}"
 			return hits.to_i
 		rescue
 		end
 		return 0
+	end
+
+	##########################################################################################################
+	# get the most recent post uuid identifier so that we only fetch newer posts (for a given provenance)
+	##########################################################################################################
+
+	def self.get_last_post(party,provenance)
+		last = Note.find(:last, :order => 'created_at',
+								:conditions => {	:kind => Note::KIND_POST,
+													:owner_id => party.id,
+													:provenance => provenance
+												}
+							)
+		ActionController::Base.logger.info "the last posted post of this party #{party.title} is #{last.uuid}" if last
+		return last.uuid if last
+		return 0
+	end
+
+	##########################################################################################################
+	# befriend a party on twitter - supply an object
+	# it's possible we can get out of sync so best to try refriend periodically
+	# note that the handler throws an error so we have to test first
+	# TODO this may need a transaction block due to statebits
+	# TODO also test bits
+	##########################################################################################################
+
+	def self.twitter_befriend(twitter,party)
+		ourname = SETTINGS[:site_twitter_username]
+		if( !(party.statebits & Note::STATEBITS_FRIENDED) ) 
+			begin
+				twitter.create_friendship(party.title) if !twitter.friendship_exists?(ourname,party.title)
+				party.statebits = Note::STATEBITS_FRIENDED | party.statebits
+				party.save
+			rescue
+			end
+		else
+		end
 	end
 
 	##########################################################################################################
@@ -115,10 +154,11 @@ class TwitterSupport
 		results = []
 		twitter = twitter_start
 		limit = self.twitter_get_remaining_hits
+		ActionController::Base.logger.info "Collecting fresh state of a party #{names_or_ids}"
 		names_or_ids.each do |name_or_id|
 			limit -= 1
-			puts "rate limit is at #{limit}"
-			puts "oh oh rate limit exceeded" if limit < 1
+			ActionController::Base.logger.info "rate limit is at #{limit}"
+			ActionController::Base.logger.debug "oh oh rate limit exceeded" if limit < 1
 			break if limit < 1
 			blob = twitter.user(name_or_id)
 			next if !blob
@@ -144,16 +184,18 @@ class TwitterSupport
 	##########################################################################################################
 
 	def self.twitter_get_friends(parties)
-		old = 24.hours.ago
 		twitter = twitter_start
 		results = []
 		limit = self.twitter_get_remaining_hits
+		old = 4.hours.ago
 		parties.each do |party|
-			next if party.updated_at > old
-			puts "rate limit is at #{limit}"
-			puts "decided to update this user because #{party.updated_at} is not > #{old}"
+			if party.updated_at > old  # if updated at time is bigger(newer) than 4 hours agos bigness then skip
+				ActionController::Base.logger.info "Skip getting friends of #{party.title} - updated recently #{party.updated_at}"
+				next
+			end
+			ActionController::Base.logger.info "decided to update this user because #{party.updated_at} is not > #{old}"
 			limit -= 1
-			puts "oh oh rate limit exceeded" if limit < 1
+			ActionController::Base.logger.debug "oh oh rate limit exceeded" if limit < 1
 			break if limit < 1
 			twitter.friends({:user_id => party.uuid, :page=>1}).each do |blob|
 				party2 = self.save_party(
@@ -165,75 +207,43 @@ class TwitterSupport
 						:begins => Time.parse(blob.created_at)
 						)
 				results << party2 if party2
-				puts "saved a friend of #{party.title} named #{party2.title}"
+				ActionController::Base.logger.info "saved a friend of #{party.title} named #{party2.title}"
 			end
+			# TODO for some reason this has to be done explicity - note that we rely on this behavior - and it is implicit
+			party.update_attributes(:updated_at => Time.now );
 		end
 		return results
 	end
 
 	##########################################################################################################
-	# twitter update a set of party profiles by tracing out friends given twitter ids
-	# TODO switch to yql later?
-	# use 'http://angel.makerlab.org/yql/twitter.user.profile.xml' as party;
-	# select * from party where id='anselm';
-	##########################################################################################################
-
-=begin
-	def self.twitter_update_friends_of_set(partyids)
-		twitter = self.twitter_start
-		partyids.each { |partyid| self.twitter_update_friends_of_party(twitter,partyid) }
-	end
-
-	def self.twitter_update_friends_of_party(twitter,partyid)
-		twitter.friends({:user_id=>partyid,:page=>0}).each do |v|
-			party = self.save_party(
-						:provenance => "twitter",
-						:uuid => v.id,
-						:title => v.screenname,
-						:location => v["location"],
-						:description => v.description,
-						:begins => Time.parse(v.created_at)
-						)
-		end
-	end
-=end
-
-	##########################################################################################################
-	# befriend a party on twitter - supply an object
-	# it's possible we can get out of sync so best to try refriend periodically
-	# note that the handler throws an error so we have to test first
-	# TODO this may need a transaction block due to statebits
-	##########################################################################################################
-
-=begin
-	def self.twitter_befriend(twitter,party)
-		ourname = SETTINGS[:site_twitter_username]
-		if( !(party.statebits & Note::STATEBITS_FRIENDED) ) 
-			begin
-				twitter.create_friendship(party.title) if !twitter.friendship_exists?(ourname,party.title)
-				party.statebits = Note::STATEBITS_FRIENDED | party.statebits
-				party.save
-			rescue
-			end
-		else
-		end
-	end
-=end
-
-	##########################################################################################################
 	# collect results from twitter search that might interest us; location,radius,topic.
-	# TODO can we only get results newer than x
+	# TODO can we only get results newer than x (no)
 	# TODO can we do without a specific term?
-	# TODO rate limit
-	# TODO use supplied radius when confident
+	# TODO slightly worried that a bad radius might be passed in
 	##########################################################################################################
 
 	def self.twitter_search(terms,lat,lon,rad)
+
+		ActionController::Base.logger.info "Searching for #{terms.join(' ')} near #{lat} #{lon} #{rad}"
+
+		if self.twitter_get_remaining_hits < 1
+			# TODO what should we do?
+			ActionController::Base.logger.debug("hit twitter rate limit")
+			return []
+		end
+
+		provenance = "twitter"
+
 		results = []
-		Twitter::Search.new(terms.join(' ')).geocode(lat,lon,"25mi").each do |twit|
+		if lat || lon
+			blob = Twitter::Search.new(terms.join(' '))
+		else
+			blob = Twitter::Search.new(terms.join(' ')).geocode(lat,lon,rad)  # TODO try conflating this verbosity
+		end
+		blob.each do |twit|
 			# build a model of the participants...
 			party = self.save_party(
-						:provenance => "twitter",
+						:provenance => twitter,
 						:uuid => twit.from_user_id,
 						:title => twit.from_user,
 						:location => twit["location"]
@@ -242,12 +252,46 @@ class TwitterSupport
 						)
 			# and the posts
 			results << self.save_post(party,
-						:provenance => "twitter",
+						:provenance => twitter,
 						:uuid => twit.id,
 						:title => twit.text,
 						:location => twit["location"],
 						:begins => Time.parse(twit.created_at)
 						)
+		end
+		return results
+	end
+
+	##########################################################################################################
+	# collect messages from a single person more recent than last collection only - also add them to system
+	# TODO switch to YQL
+	##########################################################################################################
+
+	def self.twitter_refresh_timeline(party)
+
+		twitter = self.twitter_start
+
+		if self.twitter_get_remaining_hits < 1
+			# TODO what should we do?
+			ActionController::Base.logger.debug("hit twitter rate limit")
+			return []
+		end
+
+		provenance = "twitter"
+
+		since_uuid = self.get_last_post(party,provenance)
+
+		results = []
+		list = twitter.user_timeline(:user_id=>partyid,:count=>200,:since_id=>since_uuid)  # other options: max_id, #page, #since
+		list.each do |twit|
+			ActionController::Base.logger.info "timeline - got a message #{twit.text}"
+			results << self.save_post(party,
+					:provenance => provenance,
+					:uuid => twit.id,
+					:title => twit.text,
+					:location => twit.user.location,
+					:begins => Time.parse(twit.created_at)
+					)
 		end
 		return results
 	end
@@ -286,46 +330,31 @@ class TwitterSupport
 =end
 
 	##########################################################################################################
-	# collect messages from a single person more recent than last collection only - also add them to system
-	# TODO switch to YQL
+	# twitter update a set of party profiles by tracing out friends given twitter ids
+	# TODO switch to yql later?
+	# use 'http://angel.makerlab.org/yql/twitter.user.profile.xml' as party;
+	# select * from party where id='anselm';
 	##########################################################################################################
 
-	def self.twitter_refresh_timeline(party)
-
+=begin
+	def self.twitter_update_friends_of_set(partyids)
 		twitter = self.twitter_start
-		limit = self.twitter_get_remaining_hits
-		return [] if limit < 2
-
-		provenance = "twitter"
-		kind = Note::KIND_USER
-		uuid = partyid
-		since_id = 0
-
-		# only fetch since last time
-		last = Note.find(:last, :order => 'created_at',
-								:conditions => {	:kind => Note::KIND_POST,
-													:owner_id => party.id,
-													:provenance => "twitter"
-												}
-							)
-		puts "the last id of this party #{party.title} is #{last.id}" if last
-		since_id = last.id if last
-
-		results = []
-		list = twitter.user_timeline(:user_id=>partyid,:count=>200,:since_id=>since_id)  # other options: max_id, #page, #since
-
-		list.each do |twit|
-			puts "timeline - got a message #{twit.text}"
-			results << self.save_post(party,
-					:provenance => "twitter",
-					:uuid => twit.id,
-					:title => twit.text,
-					:location => twit.user.location,
-					:begins => Time.parse(twit.created_at)
-					)
-		end
-		return results
+		partyids.each { |partyid| self.twitter_update_friends_of_party(twitter,partyid) }
 	end
+
+	def self.twitter_update_friends_of_party(twitter,partyid)
+		twitter.friends({:user_id=>partyid,:page=>0}).each do |v|
+			party = self.save_party(
+						:provenance => "twitter",
+						:uuid => v.id,
+						:title => v.screenname,
+						:location => v["location"],
+						:description => v.description,
+						:begins => Time.parse(v.created_at)
+						)
+		end
+	end
+=end
 
 	##########################################################################################################
 	# twitter get an updated timeline using yql and in this case friendfeed
@@ -350,9 +379,9 @@ class TwitterSupport
 
 	##########################################################################################################
 	# yql get the timelines of a pile of people - this is a crude way of seeing somebodys own view of reality
-	# could also do other stuff too like
+	# TODO could also maybe do searches and geographic bounds
 	# use 'http://angel.makerlab.org/yql/twitter.user.timeline.xml' as party;select * from party where id = 'anselm' and title like '%humanist%';
-	# TODO use more recent than 
+	# TODO use more recent than ( cannot do this )
 	# TODO yahoo api rate limits
 	##########################################################################################################
 
@@ -394,7 +423,7 @@ class TwitterSupport
 				end
 			end
 			if party == nil
-				puts "argh cannot find name #{partyname}"
+				ActionController::Base.logger.debug "argh cannot find name #{partyname}"
 				return
 			end
 
@@ -433,10 +462,8 @@ class TwitterSupport
 						:kind => kind
 						 })
 
-		puts "Attempting to save a new party with title #{title}"
-
-		# set this later
-		lat,lon,rad = 0,0,0
+		lat,lon,rad = self.geolocate(location)
+		ActionController::Base.logger.info "Geolocated a party #{title} to #{lat},#{lon},#{rad} ... #{location}"
 
 		if !party
 			party = Note.new(
@@ -450,14 +477,17 @@ class TwitterSupport
 				:lat => lat,
 				:lon => lon,
 				:begins => begins,
-				:statebits => Note::STATEBITS_DIRTY
+				:statebits => ( Note::STATEBITS_DIRTY | Note::STATEBITS_GEOLOCATED )
 				)
 			party.save
+			ActionController::Base.logger.info "Saved a new party with title #{title}"
 		else
-			party.update_attributes(:title => title, :description => description, :updated_at => Time.now );
+			# TODO note that for some reason :updated_at is not set here - and we rely on this behavior but it is implicit.
+			party.update_attributes(:title => title, :description => description );
 			if lat < 0 || lat > 0 || lon < 0 || lon > 0
 				party.update_attributes(:lat => lat, :lon => lon )
 			end
+			ActionController::Base.logger.info "Updated a party with title #{title}"
 		end
 
 		return party
@@ -487,17 +517,20 @@ class TwitterSupport
 						 })
 
 		if note
-			puts "Note already found #{uuid} #{title}"
+			ActionController::Base.logger.info "Note already found #{uuid} #{title}"
 			return "Note already found #{uuid} #{title}"
 		end
 
-		# set this later
-		lat,lon,rad = 0,0,0
+		# try geolocate on content or party - TODO the post itself also includes party information for that moment in time - try?
+		lat,lon,rad = self.geolocate(title)
+		if !lat && !lon
+			lat = party.lat
+			lon = party.lon
+			rad = party.rad
+		end
+		ActionController::Base.logger.info "Geolocated a post #{uuid} to #{lat},#{lon},#{rad} ... #{title}"
 
-		puts "Attempting to save a new post with title #{title}"
-
-		# Save the note, tags, and relationships between everything
-		# turn of assertion catching because there's no point to silently failing.
+		# turn of assertion catching because there's no point to silently failing ( but leave the transaction block on )
 		#begin
 		  Note.transaction do
 			note = Note.new(
@@ -513,7 +546,7 @@ class TwitterSupport
 				:created_at => DateTime::now,
 				:updated_at => DateTime::now,
 				:begins => begins,
-				:statebits => Note::STATEBITS_DIRTY
+				:statebits => ( Note::STATEBITS_DIRTY | Note::STATEBITS_GEOLOCATED )
 				)
 			note.save
 
@@ -525,9 +558,11 @@ class TwitterSupport
 				note.relation_add(Relation::RELATION_TAG,tag[1..-1])
 			end
 
+			ActionController::Base.logger.info "Saved a new post from #{party.title} ... #{title}"
+
 		  end
 		#rescue
-		#	puts "badness - failed to save the post"
+		#	ActionController::Base.logger.debug "badness - failed to save the post"
 		#end
 		return note
 	end
@@ -537,7 +572,7 @@ class TwitterSupport
 	###########################################################################################
 
 =begin
-	# Response handling is kept separate from consuming inputs; they are asynchronous for stability and speed
+	# Response handling is kept separate from consuming; they are asynchronous for stability and speed
 	# TODO respond more intelligently
 	# TODO bitmasks are borked
 	def self.respond_all_this_is_currently_unused
@@ -667,6 +702,14 @@ class TwitterSupport
 
 	def self.query(phrase)
 
+		# for debugging lets flush everything
+		if true
+			Note.delete_all
+			Relation.delete_all
+		end
+
+		ActionController::Base.logger.info "Query: beginning at time #{Time.now}"
+
 		# tear apart query
 		q = self.query_parse(phrase)
 
@@ -676,16 +719,21 @@ class TwitterSupport
 		ends = nil
 
 		# get bounds if any
+		lat,lon,rad = 0,0,0
 		lat,lon,rad = self.geolocate(q[:placenames].join(' ')) if q[:placenames].length
-		puts "query: geolocated the query itself to #{lat} #{lon}"
+		ActionController::Base.logger.info "query: geolocated the query #{q[:placenames].join(' ')} to #{lat} #{lon} #{rad}"
 
-		# did the user supply some people as the anchor of a search? refresh them if so ( this is not costly )
+		# did the user supply some people as the anchor of a search? refresh them and get their friends ( this is cheap )
 		q[:parties] = self.twitter_get_parties(q[:partynames])
 		q[:friends] = self.twitter_get_friends(q[:parties])
-		#q[:aquaintances] = ...
+
+		# get the extended first level network of aquaintances ... this is expensive
+		# q[:acquaintances] = self.twitter_get_friends(q[:friends])
 
 		# reap old data
 		self.reaper
+
+		ActionController::Base.logger.info "Query: has now collected people and friends to anchor search at time #{Time.now}"
 
 		# this query itself should be saved and published to everybody TODO
 
@@ -706,39 +754,59 @@ class TwitterSupport
 				# in this strategy we talk to an intermediary like YQL and query on the set of friends for recent traffic.
 				# in this way we CAN do the query that we hope to do with friends_twitter
 				# we could also query on search terms if any and or apply a default search filter? like "help" and "i need"?
-				puts "query: using a yql search for parties"
+				ActionController::Base.logger.info "query: using a yql search for parties"
 				self.yql_twitter_get_timelines(q[:parties])
+				# self.yql_twitter_get_timelines(q[:friends])
+				# self.yql_twitter_get_timelines(q[:acquiantances])
 			when "recent"
 				# in this strategy we look at the core members only and get their friends recent timelines.
 			end
 		else
 			# if there are no people to anchor the search then just let twitter do the search
-			puts "query: using a general search strategy looking for #{q[:words].join(' ')} near #{lat} #{lon} #{rad}"
+			ActionController::Base.logger.info "query: using a general search strategy looking for #{q[:words].join(' ')} near #{lat} #{lon} #{rad}"
 			self.twitter_search(q[:words],lat,lon,rad)
 		end
 
- return []
+		ActionController::Base.logger.info "Query: has finished updating external data sources at time #{Time.now}"
 
-# todo
-#   test bitmasks
-#   finish yql query
-#		should we just query by terms and geography ALSO?
-#   remember relationships between people
-#   see if i can find things i search for
-#   let users upscore things by bookmarking them
-#   try to emphasize scored things
-#   is there any point to using acts as solr at this point?
+		if true
+			Note.rebuild_solr_index
+		end
+
+		results = []
+		results = Note.find_by_solr(q[:words].join(" ")) if q[:words].length
+
+		ActionController::Base.logger.info "Query: done - with these results:"
+		results.docs.each do |r|
+			ActionController::Base.logger.info "Got #{r}"
+		end
+
+		return results
+
+#@results = Camera.find_by_solr("powershot"+" AND resolution:[0 TO 4]",
+
+#
+# to do now ... build a query so that i can actually query my own database...
+# maybe we can do it for everything except term searches without using solr
+#
+# simple visualization
+#	show the people
+#	show their relationships
+#	show their content
+#	show geographic region
+#	show filtered searches
+#	let members bookmark things
+#
+# find  pizza in the geographic boundaries from these people
+#
+# i would have to build a reverse lookup term database
+# and there are lots of other implications to search...
+# or i can try use solr ... which can surely do it....
+#
+# or i can also try do it myself...
 #
 
-		# update geolocation of entries
-		self.geolocate_all
-
-		# tear apart sentences and pluck out urls and hashtags and the like
-		# right now we already track most of this except urls
-		# self.metadata_all
-
-		# rescore entries - also considering what members have consciously scored up
-		# we won't need to score until we get bigger
+		# rescore entries by objective metrics for now
 		# self.score_all
 
 		# build a solr query with terms, location, score, filtered by friends, ordered by time
