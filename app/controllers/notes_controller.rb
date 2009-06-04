@@ -24,11 +24,12 @@ class NotesController < ApplicationController
   def index
     @notes = TwitterSupport::query(params[:q])
     @notes.each do |item|
+		ActionController::Base.logger.info "mapping feature #{item.title} at #{item.lat} and #{item.lon}"
         @map.feature( {
           :title => "#{item.title} #{item.description}",
           :kind => :marker,
-          :lat => "#{item.lat+rand(10)/100}",
-          :lon => "#{item.lon+rand(10)/100}"
+          :lat => "#{item.lat}",
+          :lon => "#{item.lon}"
         }
      )
     end

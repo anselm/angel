@@ -193,7 +193,7 @@ var map_markers = [];
 var map_marker;
 var lat = 28.000;
 var lon = -90.500;
-var zoom = 1;
+var zoom = 9;
 var map_markers_raw = #{@features.to_json};
 /// convenience utility: drag event handler
 function mapper_disable_dragging() {
@@ -223,10 +223,10 @@ function mapper_callback() {
   map.addControl(mapControl);
   map.addControl(new GSmallMapControl());
   // map.removeMapType(G_HYBRID_MAP);
-  // add features dynamically
-  mapper_inject(map_markers_raw);
   // set centering even if overriden otherwise google maps fails sometimes
   map.setCenter((new GLatLng(#{@lat},#{@lon})),#{@zoom}, #{@map_type});
+  // add features dynamically
+  mapper_inject(map_markers_raw);
   // set centering on markers if preferred
   if(#{@map_cover_all_points}) {
      mapper_center();
@@ -248,7 +248,9 @@ function mapper_center() {
   for (var i=0; i<markers.length; i++) {
     bounds.extend(markers[i].getPoint());
   }
-  map.setCenter( bounds.getCenter( ), map.getBoundsZoomLevel( bounds ) - 1 );
+  var thezoom = map.getBoundsZoomLevel(bounds);
+  if(thezoom > 15 ) thezoom = 15;
+  map.setCenter( bounds.getCenter( ), thezoom );
 }
 /// add a marker as a closure for javascript variable scope
 function mapper_create_marker(point,title) {
@@ -279,7 +281,7 @@ function mapper_inject(features) {
     } 
     else if( feature.kind == "marker" ) {
       var ll = new GLatLng(feature["lat"],feature["lon"]);
-      var title = feature["title"]
+      var title = feature["title"];
       var marker = mapper_create_marker(ll,title);
       if(feature["style"] == "show") { GEvent.trigger(marker,"click"); }
     } 

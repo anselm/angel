@@ -21,7 +21,7 @@ class CreateNotes < ActiveRecord::Migration
       t.string   :location
       t.float    :lat
       t.float    :lon
-      t.float    :radius
+      t.float    :rad
       t.datetime :begins
       t.datetime :ends
 

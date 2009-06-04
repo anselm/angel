@@ -216,10 +216,10 @@ class TwitterSupport
 	end
 
 	##########################################################################################################
-	# collect results from twitter search that might interest us; location,radius,topic.
+	# collect results from twitter search that might interest us; location,rad,topic.
 	# TODO can we only get results newer than x (no)
 	# TODO can we do without a specific term?
-	# TODO slightly worried that a bad radius might be passed in
+	# TODO slightly worried that a bad rad might be passed in
 	##########################################################################################################
 
 	def self.twitter_search(terms,lat,lon,rad)
@@ -476,6 +476,7 @@ class TwitterSupport
 				:begins => begins,
 				:lat => lat,
 				:lon => lon,
+				:rad => rad,
 				:begins => begins,
 				:statebits => ( Note::STATEBITS_DIRTY | Note::STATEBITS_GEOLOCATED )
 				)
@@ -523,10 +524,12 @@ class TwitterSupport
 
 		# try geolocate on content or party - TODO the post itself also includes party information for that moment in time - try?
 		lat,lon,rad = self.geolocate(title)
-		if !lat && !lon
+		# WHY? TODO
+		if lat > -1 && lat < 1 && lon > -1 && lon < 1
 			lat = party.lat
 			lon = party.lon
 			rad = party.rad
+			ActionController::Base.logger.info "Geolocated a post using user data ***********"
 		end
 		ActionController::Base.logger.info "Geolocated a post #{uuid} to #{lat},#{lon},#{rad} ... #{title}"
 
@@ -542,6 +545,7 @@ class TwitterSupport
 				:location => location,
 				:lat => lat,
 				:lon => lon,
+				:rad => rad,
 				:owner_id => party.id,
 				:created_at => DateTime::now,
 				:updated_at => DateTime::now,
@@ -612,7 +616,7 @@ class TwitterSupport
 	###########################################################################################
 	# query construction
 	# TODO deal with time
-	# TODO radius support
+	# TODO rad support
 	# TODO longitudinal and latitudinal wraparound
 	###########################################################################################
 
@@ -702,11 +706,9 @@ class TwitterSupport
 
 	def self.query(phrase)
 
-		# for debugging lets flush everything
-		if true
-			Note.delete_all
-			Relation.delete_all
-		end
+		# for debugging lets flush everything - makes solr go crazy - have to delete solr index
+		# Note.delete_all
+		# Relation.delete_all
 
 		ActionController::Base.logger.info "Query: beginning at time #{Time.now}"
 
@@ -769,18 +771,27 @@ class TwitterSupport
 
 		ActionController::Base.logger.info "Query: has finished updating external data sources at time #{Time.now}"
 
-		if true
-			Note.rebuild_solr_index
-		end
+		# uh weird.
+		Note.rebuild_solr_index
 
+		# ask solr
+		phrase = q[:words].join(" ")
 		results = []
-		results = Note.find_by_solr(q[:words].join(" ")) if q[:words].length
-
-		ActionController::Base.logger.info "Query: done - with these results:"
-		results.docs.each do |r|
-			ActionController::Base.logger.info "Got #{r}"
+		search_phrase = "(* to *)" # #{phrase} AND lat:[0 to 4]"
+		ActionController::Base.logger.info "Query: solr now looking for: #{search_phrase}"
+		if q[:words].length
+			results = Note.find_by_solr(search_phrase)
+			results = results.docs if results
+			results = [] if !results
 		end
 
+		# debug show results
+		ActionController::Base.logger.info "Query: results " if results.length > 0
+		results.each do |r|
+			ActionController::Base.logger.info "Got #{r.uuid} #{r.title}"
+		end
+
+		# return and print results
 		return results
 
 #@results = Camera.find_by_solr("powershot"+" AND resolution:[0 TO 4]",

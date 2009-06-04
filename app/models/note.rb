@@ -29,7 +29,7 @@ end
 
 class Note < ActiveRecord::Base
   has_many :relations
-  acts_as_solr( :fields => [:title, {:lat=>:range_float}, {:lon=>:range_float}] )
+  acts_as_solr :fields => [:title, {:lat=>:range_float}, {:lon=>:range_float}]
   KIND_NULL = "null"
   KIND_USER = "user"
   KIND_POST = "post"
