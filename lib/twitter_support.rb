@@ -777,7 +777,7 @@ class TwitterSupport
 		# ask solr
 		phrase = q[:words].join(" ")
 		results = []
-		search_phrase = "(* to *)" # #{phrase} AND lat:[0 to 4]"
+		search_phrase = "#{phrase} AND lat:[0 to 4]"
 		ActionController::Base.logger.info "Query: solr now looking for: #{search_phrase}"
 		if q[:words].length
 			results = Note.find_by_solr(search_phrase)
