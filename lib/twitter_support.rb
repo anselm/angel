@@ -181,6 +181,8 @@ class TwitterSupport
 	# TODO i could just get all friend via yql more efficiently in a more scalable way...
 	#    SELECT * FROM social.profile WHERE guid IN (SELECT guid FROM social.connections WHERE owner_guid=me)
 	# TODO should i return something nice to the caller if we fail due to rate limits or the like?
+	# TODO only gets one page full ( 100 only! )
+	# TODO manual updated_at? for some reason this has to be done explicity - note that we rely on this behavior - and it is implicit
 	##########################################################################################################
 
 	def self.twitter_get_friends(parties)
@@ -191,6 +193,9 @@ class TwitterSupport
 		parties.each do |party|
 			if party.updated_at > old  # if updated at time is bigger(newer) than 4 hours agos bigness then skip
 				ActionController::Base.logger.info "Skip getting friends of #{party.title} - updated recently #{party.updated_at}"
+				party.relation_all_siblings_as_notes(Note::RELATION_FRIEND,nil).each do |party2|
+					results << party2  # TODO sloppy - just use an array concatenation
+				end
 				next
 			end
 			ActionController::Base.logger.info "decided to update this user because #{party.updated_at} is not > #{old}"
@@ -199,18 +204,18 @@ class TwitterSupport
 			break if limit < 1
 			twitter.friends({:user_id => party.uuid, :page=>1}).each do |blob|
 				party2 = self.save_party(
-						:provenance => "twitter",
-						:uuid => blob.id,
-						:title => blob.screen_name,
-						:location => blob["location"],
-						:description => blob.description,
-						:begins => Time.parse(blob.created_at)
-						)
-				results << party2 if party2
+					:provenance => "twitter",
+					:uuid => blob.id,
+					:title => blob.screen_name,
+					:location => blob["location"],
+					:description => blob.description,
+					:begins => Time.parse(blob.created_at)
+					)
+				party.relation_add(Note::RELATION_FRIEND,1,party2.id)  # party1 has chosen to follow party2
+				results << party2
 				ActionController::Base.logger.info "saved a friend of #{party.title} named #{party2.title}"
 			end
-			# TODO for some reason this has to be done explicity - note that we rely on this behavior - and it is implicit
-			party.update_attributes(:updated_at => Time.now );
+			party.update_attributes(:updated_at => Time.now )
 		end
 		return results
 	end
@@ -243,7 +248,7 @@ class TwitterSupport
 		blob.each do |twit|
 			# build a model of the participants...
 			party = self.save_party(
-						:provenance => twitter,
+						:provenance => provenance,
 						:uuid => twit.from_user_id,
 						:title => twit.from_user,
 						:location => twit["location"]
@@ -252,7 +257,7 @@ class TwitterSupport
 						)
 			# and the posts
 			results << self.save_post(party,
-						:provenance => twitter,
+						:provenance => provenance,
 						:uuid => twit.id,
 						:title => twit.text,
 						:location => twit["location"],
@@ -555,11 +560,11 @@ class TwitterSupport
 			note.save
 
 			# build a relationship to the owner - not really needed except for CNG traversals
-			note.relation_add(Relation::RELATION_OWNER,party.id)
+			note.relation_add(Note::RELATION_OWNER,party.id)
 
 			# build a relationship to hash tags
 			args[:title].scan(/#[a-zA-Z]+/).each do |tag|
-				note.relation_add(Relation::RELATION_TAG,tag[1..-1])
+				note.relation_add(Note::RELATION_TAG,tag[1..-1])
 			end
 
 			ActionController::Base.logger.info "Saved a new post from #{party.title} ... #{title}"
@@ -723,6 +728,7 @@ class TwitterSupport
 		# get bounds if any
 		lat,lon,rad = 0,0,0
 		lat,lon,rad = self.geolocate(q[:placenames].join(' ')) if q[:placenames].length
+		q[:lat],q[:lon],q[:rad] = lat,lon,rad
 		ActionController::Base.logger.info "query: geolocated the query #{q[:placenames].join(' ')} to #{lat} #{lon} #{rad}"
 
 		# did the user supply some people as the anchor of a search? refresh them and get their friends ( this is cheap )
@@ -771,19 +777,36 @@ class TwitterSupport
 
 		ActionController::Base.logger.info "Query: has finished updating external data sources at time #{Time.now}"
 
-		# uh weird.
-		Note.rebuild_solr_index
+		# TODO not certain if this sometimes helps with filtering
+		# Note.rebuild_solr_index
 
-		# ask solr
-		phrase = q[:words].join(" ")
+		# go ask solr
 		results = []
-		search_phrase = "#{phrase} AND lat:[0 to 4]"
+		search = [ q[:words].join(" ") ]
+		if lat || lon
+			# TODO at some point we should use the range that the user indicates
+			range = 1
+			search << "lat:[#{lat-range} TO #{lat+range}]"
+			search << "lon:[#{lon-range-range} TO #{lon+range+range}]"
+		else
+		end
+		search_phrase = search.join(" AND ")
 		ActionController::Base.logger.info "Query: solr now looking for: #{search_phrase}"
-		if q[:words].length
-			results = Note.find_by_solr(search_phrase)
+		total_hits = 0
+		if search.length
+			results = Note.find_by_solr(search_phrase,
+										:offset => 0,
+										:limit => 50
+										#:order => "id desc",
+										#:operator => "and"
+										)
+			total_hits = results.total_hits
 			results = results.docs if results
 			results = [] if !results
 		end
+		q[:search_phrase] = search_phrase 
+		q[:results] = results
+		q[:total_hits] = total_hits
 
 		# debug show results
 		ActionController::Base.logger.info "Query: results " if results.length > 0
@@ -791,57 +814,7 @@ class TwitterSupport
 			ActionController::Base.logger.info "Got #{r.uuid} #{r.title}"
 		end
 
-		# return and print results
-		return results
-
-#@results = Camera.find_by_solr("powershot"+" AND resolution:[0 TO 4]",
-
-#
-# to do now ... build a query so that i can actually query my own database...
-# maybe we can do it for everything except term searches without using solr
-#
-# simple visualization
-#	show the people
-#	show their relationships
-#	show their content
-#	show geographic region
-#	show filtered searches
-#	let members bookmark things
-#
-# find  pizza in the geographic boundaries from these people
-#
-# i would have to build a reverse lookup term database
-# and there are lots of other implications to search...
-# or i can try use solr ... which can surely do it....
-#
-# or i can also try do it myself...
-#
-
-		# rescore entries by objective metrics for now
-		# self.score_all
-
-		# build a solr query with terms, location, score, filtered by friends, ordered by time
-		if terms.length
-			str = terms.join(" ")
-		else
-			str = "[ * ] "
-		end
-
-		#if lon && lat
-		#	str = "lon:[0 TO 4] AND lat:[0 TO 4]"
-		#end
-
-		results = Note.find_by_solr(str,
-					:offset => 0,
-					:limit => 50,
-					#:scores => true,
-					:order => "id desc",
-					:operator => "and"
-					)
-		products = results.docs
-		total_hits = results.total_hits
-
-		return products
+		return q
 
 	end
 

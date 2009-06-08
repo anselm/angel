@@ -22,20 +22,10 @@ class NotesController < ApplicationController
   end
 
   def index
-    @notes = TwitterSupport::query(params[:q])
-    @notes.each do |item|
-		ActionController::Base.logger.info "mapping feature #{item.title} at #{item.lat} and #{item.lon}"
-        @map.feature( {
-          :title => "#{item.title} #{item.description}",
-          :kind => :marker,
-          :lat => "#{item.lat}",
-          :lon => "#{item.lon}"
-        }
-     )
-    end
+    @query = TwitterSupport::query(params[:q])
     respond_to do |format|
       format.html # index.html.erb
-      format.xml  { render :xml => @notes }
+      format.xml  { render :xml => @query }
     end
   end
 

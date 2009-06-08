@@ -195,6 +195,36 @@ var lat = 28.000;
 var lon = -90.500;
 var zoom = 9;
 var map_markers_raw = #{@features.to_json};
+
+var icons = [ "weather-storm.png",
+"weather-snow.png",
+"weather-overcast.png",
+"weather-showers-scattered.png",
+"weather-clear.png",
+"weather-few-clouds.png",
+"weather-clear-night.png",
+"start-here.png",
+"media-skip-forward.png",
+"media-record.png",
+"face-wink.png",
+"image-loading.png",
+"face-surprise.png",
+"face-smile.png",
+"face-smile-big.png",
+"face-sad.png",
+"face-plain.png",
+"face-monkey.png",
+"face-kiss.png",
+"face-devil-grin.png",
+"face-angel.png",
+"face-crying.png",
+"emblem-photos.png",
+"emblem-important.png",
+"emblem-favorite.png",
+];
+var base_icon;
+var icon_index = 0;
+
 /// convenience utility: drag event handler
 function mapper_disable_dragging() {
   if( map ) map.disableDragging();
@@ -213,6 +243,15 @@ function mapper_start() {
   // google.setOnLoadCallback(mapper_callback);
   // google.load("maps", "2.x");
 }
+/// mapper icon support
+function mapper_icons() {
+	base_icon = new GIcon(G_DEFAULT_ICON);
+	base_icon.shadow = "http://www.google.com/mapfiles/shadow50.png";
+	base_icon.iconSize = new GSize(20, 34);
+	base_icon.shadowSize = new GSize(37, 34);
+	base_icon.iconAnchor = new GPoint(9, 34);
+	//base_icon.infoWindowAnchor = new GPoint(9, 2);
+}
 /// mapping engine setup
 function mapper_callback() {
   // start but dont start twice
@@ -222,6 +261,8 @@ function mapper_callback() {
   var mapControl = new GMapTypeControl();
   map.addControl(mapControl);
   map.addControl(new GSmallMapControl());
+  // setup custom icon support
+  mapper_icons();
   // map.removeMapType(G_HYBRID_MAP);
   // set centering even if overriden otherwise google maps fails sometimes
   map.setCenter((new GLatLng(#{@lat},#{@lon})),#{@zoom}, #{@map_type});
@@ -252,10 +293,14 @@ function mapper_center() {
   if(thezoom > 15 ) thezoom = 15;
   map.setCenter( bounds.getCenter( ), thezoom );
 }
-/// add a marker as a closure for javascript variable scope
+/// must be a separate function for closure : add a marker
 function mapper_create_marker(point,title) {
   var number = map_markers.length
-  var marker = new GMarker(point, { title:title } );
+  var marker_options = { title:title }
+  if ( map_icons.length > 0 ) {
+	marker_options["icon"] = map_icons[map_icons.length-1];
+  }
+  var marker = new GMarker(point, marker_options );
   map_markers.push(marker)
   marker.value = number;
   GEvent.addListener(marker, "click", function() {
@@ -271,20 +316,28 @@ function mapper_inject(features) {
   var j=features.length;
   for(var i=0;i<j;i++) {
     var feature = features[i];
+	/*
+	if(feature.kind == "icon_numbered") {
+		var icon = new GIcon(base_icon);
+		var letter = String.fromCharCode("A".charCodeAt(0) + icon_index);
+		icon.image = "http://www.google.com/mapfiles/marker" + letter + ".png";
+		map_icons.push(icon);
+	  } else
+	*/
     if(feature.kind == "icon") {
       var icon = new GIcon();
       icon.image = feature["image"];
       icon.iconSize = new GSize(feature["iconSize"][0],feature["iconSize"][1]);
       icon.iconAnchor = new GPoint(feature["iconAnchor"][0],feature["iconAnchor"][1]);
-      icon.infoWindowAnchor = new GPoint(feature["infoWindowAnchor"][0],feature["infoWindowAnchor"][1]);
+      //icon.infoWindowAnchor = new GPoint(feature["infoWindowAnchor"][0],feature["infoWindowAnchor"][1]);
       map_icons.push(icon);
-    } 
+    }
     else if( feature.kind == "marker" ) {
       var ll = new GLatLng(feature["lat"],feature["lon"]);
       var title = feature["title"];
       var marker = mapper_create_marker(ll,title);
       if(feature["style"] == "show") { GEvent.trigger(marker,"click"); }
-    } 
+    }
     else if( feature.kind == "line") {
       var p1 = new GLatLng(feature["lat"],feature["lon"]);
       var p2 = new GLatLng(feature["lat2"],feature["lon2"]);

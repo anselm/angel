@@ -16,9 +16,6 @@ require 'solr'
 class Relation < ActiveRecord::Base
   belongs_to :note
   #  acts_as_solr( :fields => [ :value ] )  ...disabled for now...
-  RELATION_NULL                = "null"
-  RELATION_TAG                 = "tag"
-  RELATION_OWNER               = "owner"
 end
 
 ###########################################################################################################
@@ -30,6 +27,10 @@ end
 class Note < ActiveRecord::Base
   has_many :relations
   acts_as_solr :fields => [:title, {:lat=>:range_float}, {:lon=>:range_float}]
+  RELATION_NULL		= "null"
+  RELATION_TAG		= "tag"
+  RELATION_OWNER	= "owner"
+  RELATION_FRIEND	= "friend"
   KIND_NULL = "null"
   KIND_USER = "user"
   KIND_POST = "post"
@@ -53,12 +54,12 @@ end
 
 class Note
 
-  def relation_get(kind, sibling_id = nil)
+  def relation_value(kind, sibling_id = nil)
     r = nil
     if sibling_id
-      r = Relation.first(:note_id => self.id, :kind => kind, :sibling_id => sibling_id )
+	  r = Relation.find(:first, :conditions => { :note_id => self.id, :kind => kind, :sibling_id => sibling_id} )
     else
-      r = Relation.first(:note_id => self.id, :kind => kind )
+	  r = Relation.find(:first, :conditions => { :note_id => self.id, :kind => kind } )
     end
     return r.value if r
     return nil
@@ -67,18 +68,26 @@ class Note
   def relation_first(kind, sibling_id = nil)
     r = nil
     if sibling_id
-      r = Relation.first(:note_id => self.id, :kind => kind, :sibling_id => sibling_id )
+	  r = Relation.find(:first, :conditions => { :note_id => self.id, :kind => kind, :sibling_id => sibling_id} )
     else
-      r = Relation.first(:note_id => self.id, :kind => kind )
+	  r = Relation.find(:first, :conditions => { :note_id => self.id, :kind => kind } )
     end
     return r
   end
 
-  def relation_all(kind = nil, sibling_id = nil)
+  # TODO rate limit
+  # TODO use a join
+  def relation_all_siblings_as_notes(kind = nil, sibling_id = nil)
     query = { :note_id => self.id }
     query[:kind] = kind if kind
     query[:sibling_id] = sibling_id if sibling_id
-    Relation.all(query)
+    relations = Relation.find(:all,:conditions=>query)
+	results = []
+	relations.each do |r|
+		note = Note.find(:first,:conditions => { :id => r.sibling_id } )
+		results << note if note
+	end
+	return results
   end
 
   def relation_destroy(kind = nil, sibling_id = nil)
@@ -89,8 +98,12 @@ class Note
   end
 
   def relation_add(kind, value, sibling_id = nil)
-    relation_destroy(kind,sibling_id)
-    return if !value
+    relation = relation_first(kind,sibling_id)
+	if relation
+		return if relation.value == value
+		relation.update_attributes(:value => value)
+		return
+	end
     Relation.create!({
                  :note_id => self.id,
                  :sibling_id => sibling_id,
@@ -114,14 +127,17 @@ class Note
 
   def relation_save_hash_tags(text)
      text.scan(/#[a-zA-Z]+/i).each do |tag|
-       relation_add(Relation::RELATION_TAG,tag[1..-1])
+       relation_add(Note::RELATION_TAG,tag[1..-1])
      end
   end
 
 end
 
+=begin
+
 ############################################################################################
 #
+# unused for now - we use solr
 # Word index - a local search engine
 #
 ############################################################################################
@@ -168,6 +184,7 @@ end
 
 ###########################################################################################################
 #
+# unused for now - we use solr
 # native search engine support - thought this might be convenient instead of offloading to sphinx, solr etc 
 #
 ###########################################################################################################
@@ -225,7 +242,8 @@ end
 
 ###########################################################################################################
 #
-# this is the search engine ranking algorithm implementation 
+# unused for now - we are using solr
+# this is a search engine ranking algorithm implementation 
 #
 # http://blog.saush.com/2009/03/write-an-internet-search-engine-with-200-lines-of-ruby-code/
 #
@@ -255,7 +273,7 @@ class Digger
     @common_select = "from #{tables.join(', ')} where #{(joins + ids).join(' and ')} group by loc0.note_id, #{posns.join(', ')}"
     rank[0..SEARCH_LIMIT]
     notes = []
-    rank.each { |id,score| notes << Note.first(:id => id) }
+    rank.each { |id,score| notes << Note.find(:first, :conditions => { :id => id } ) }
     return notes
   end
 
@@ -304,83 +322,6 @@ end
 
 ###########################################################################################################
 #
-# a test of solr search engine using a solr_ruby plugin that suxxors - not used
-#
-###########################################################################################################
-
-=begin
-
-  # here is an attempt to use solr for the same work
-  # probably should conflate add and update
-  #
-  def self.rebuild_all
-    conn = Solr::Connection.new('http://127.0.0.1:8983/solr', :autocommit => :on )
-    results = Note.all( :offset => 0, :limit => 100 , :order => [ :created_at.desc ] )
-    results.each do |note|
-      conn.add(:id => note.id, :title_text => note.title )
-      puts "added document #{note.id} #{note.title}"
-    end
-  end
-
-  def self.search(for_text)
-    conn = Solr::Connection.new('http://127.0.0.1:8983/solr', :autocommit => :on )
-    results = [] 
-    response = conn.query(for_text)
-    response.hits.each do |hit|
-      note = Note.first(hit.id)
-      results << note if note
-    end
-    return results
-  end
-
-=end
-
-###########################################################################################################
-#
-# here is some scratch code for talking to solr directly
-# there is another plugin called sunspot that is worth trying
-# what is interesting is that this approach is very powerful - allowing diferent metadata
-#
-###########################################################################################################
-
-=begin
-
-<add>
-  <doc>
-    <field name="id">9885A004</field>
-    <field name="name">Canon PowerShot SD500</field>
-    <field name="category">camera</field>
-    <field name="features">3x optical zoom</field>
-    <field name="features">aluminum case</field>
-    <field name="weight">6.4</field>
-    <field name="price">329.95</field>
-  </doc>
-</add>
-
-require 'net/http'
-
-h = Net::HTTP.new('localhost', 8983)
-hresp, data = h.get('/solr/select?q=iPod&wt=ruby', nil)
-rsp = eval(data)
-
-puts 'number of matches = ' + rsp['response']['numFound'].to_s
-#print out the name field for each returned document
-rsp['response']['docs'].each { |doc| puts 'name field = ' + doc['name'] }
-
-
-
-url = URI.parse('http://localhost:3000/someservice/')
-request = Net::HTTP::Post.new(url.path)
-request.body = "<?xml version='1.0' encoding='UTF-8'?><somedata><name>Test Name 1</name><description>Some data for Unit testing</description></somedata>"
-response = Net::HTTP.start(url.host, url.port) {|http| http.request(request)}
-
-#Note this test PASSES!
-assert_equal '201 Created', response.get_fields('Status')[0]
-
-=end
-
-###########################################################################################################
-#
 # here is a test of carrot2 to cluster
 # since carrot2 only clusters well for 1k documents or so we will need to reduce our query scope before here
 #
@@ -420,6 +361,7 @@ class Note
 end
 
 
+=end
 
 class Note
 
