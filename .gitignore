@@ -1,3 +1,4 @@
+.svn
 solr/**/*
 log/*.log
 tmp/**/*
