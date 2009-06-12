@@ -222,7 +222,8 @@ class TwitterSupport
 
 	##########################################################################################################
 	# collect results from twitter search that might interest us; location,rad,topic.
-	# TODO can we only get results newer than x (no)
+	# geolocate posts here if they don't have any better details
+        # TODO can we only get results newer than x (no)
 	# TODO can we do without a specific term?
 	# TODO slightly worried that a bad rad might be passed in
 	##########################################################################################################
@@ -234,37 +235,57 @@ class TwitterSupport
 		if self.twitter_get_remaining_hits < 1
 			# TODO what should we do?
 			ActionController::Base.logger.debug("hit twitter rate limit")
-			return []
+			return [],[]
 		end
 
 		provenance = "twitter"
 
-		results = []
-		if lat || lon
-			blob = Twitter::Search.new(terms.join(' '))
-		else
+		posts = []
+		parties = []
+		blob = []
+		if lat < 0 || lat > 0 || lon < 0 || lon > 0
+			rad = "25mi"
 			blob = Twitter::Search.new(terms.join(' ')).geocode(lat,lon,rad)  # TODO try conflating this verbosity
+			ActionController::Base.logger.debug("twitter_search with #{terms} and lat lon #{lat} #{lon}")
+		else
+			blob = Twitter::Search.new(terms.join(' '))
+			ActionController::Base.logger.debug("twitter_search with #{terms} without lat or lon")
 		end
+
+		if !blob 
+			ActionController::Base.logger.debug("did not find any twitter search results?")
+			return [],[]
+		end
+
 		blob.each do |twit|
+
 			# build a model of the participants...
 			party = self.save_party(
 						:provenance => provenance,
 						:uuid => twit.from_user_id,
 						:title => twit.from_user,
-						:location => twit["location"]
+						:location => twit["location"],
+						:fallback_lat => lat,
+						:fallback_lon => lon,
+						:fallback_rad => rad
 						#:description => twit.user.description, TODO ( a separate query )
 						#:begins => Time.parse(twit.created_at) TODO ( a separate query )
 						)
 			# and the posts
-			results << self.save_post(party,
+			post = self.save_post(party,
 						:provenance => provenance,
 						:uuid => twit.id,
 						:title => twit.text,
 						:location => twit["location"],
+						:fallback_lat => lat,
+						:fallback_lon => lon,
+						:fallback_rad => rad,
 						:begins => Time.parse(twit.created_at)
 						)
+			parties << party
+			posts << post
 		end
-		return results
+		return posts,parties
 	end
 
 	##########################################################################################################
@@ -286,8 +307,9 @@ class TwitterSupport
 
 		since_uuid = self.get_last_post(party,provenance)
 
+		# other options: max_id, #page, #since
 		results = []
-		list = twitter.user_timeline(:user_id=>partyid,:count=>200,:since_id=>since_uuid)  # other options: max_id, #page, #since
+		list = twitter.user_timeline(:user_id=>partyid,:count=>200,:since_id=>since_uuid) 
 		list.each do |twit|
 			ActionController::Base.logger.info "timeline - got a message #{twit.text}"
 			results << self.save_post(party,
@@ -460,6 +482,9 @@ class TwitterSupport
 		description = args[:description]
 		last_login_at = args[:begins]
 		begins = args[:begins]
+		fallback_lat = args[:fallback_lat]
+		fallback_lon = args[:fallback_lon]
+		fallback_rad = args[:fallback_rad]
 
 		party = Note.find(:first, :conditions => { 
 						:provenance => provenance,
@@ -468,6 +493,11 @@ class TwitterSupport
 						 })
 
 		lat,lon,rad = self.geolocate(location)
+		if !lat && !lon
+			lat = fallback_lat if fallback_lat
+			lon = fallback_lon if fallback_lon
+			ActionController::Base.logger.info "Geolocated a party using fallback *********** #{lat} #{lon}"
+		end
 		ActionController::Base.logger.info "Geolocated a party #{title} to #{lat},#{lon},#{rad} ... #{location}"
 
 		if !party
@@ -514,6 +544,34 @@ class TwitterSupport
 		description = args[:description]
 		#last_login_at = args[:begins]
 		begins = args[:begins]
+		fallback_lat = args[:fallback_lat]
+		fallback_lon = args[:fallback_lon]
+		fallback_rad = args[:fallback_rad]
+
+#test
+# move this below
+
+		# try geolocate on content or party 
+		#- TODO the post itself also includes party information for that moment in time - try?
+		lat,lon,rad = self.geolocate(title)
+		if !lat && !lon 
+			lat = party.lat
+			lon = party.lon
+			rad = party.rad
+			ActionController::Base.logger.info "Geolocated a post using user data *********** #{lat} #{lon}"
+		end
+		
+		if lat == 0 && lon == 0
+			lat = fallback_lat if fallback_lat
+			lon = fallback_lon if fallback_lon
+			ActionController::Base.logger.info "Geolocated a post using fallback data *********** #{lat} #{lon}"
+		else
+			ActionController::Base.logger.info "Lat and lon are not zero #{lat} #{lon}"
+			ActionController::Base.logger.info "Lat and lon are not zero #{fallback_lat} #{fallback_lon}"
+		end
+		ActionController::Base.logger.info "Geolocated a post #{uuid} to #{lat},#{lon},#{rad} ... #{title}"
+
+#testend
 
 		# We build a model of accumulated posts but don't store posts twice
 		note = Note.find(:first, :conditions => { 
@@ -523,20 +581,12 @@ class TwitterSupport
 						 })
 
 		if note
+if lat || lon
+note.update_attributes ( :lat => lat, :lon => lon, :rad => rad )
+end
 			ActionController::Base.logger.info "Note already found #{uuid} #{title}"
 			return "Note already found #{uuid} #{title}"
 		end
-
-		# try geolocate on content or party - TODO the post itself also includes party information for that moment in time - try?
-		lat,lon,rad = self.geolocate(title)
-		# WHY? TODO
-		if lat > -1 && lat < 1 && lon > -1 && lon < 1
-			lat = party.lat
-			lon = party.lon
-			rad = party.rad
-			ActionController::Base.logger.info "Geolocated a post using user data ***********"
-		end
-		ActionController::Base.logger.info "Geolocated a post #{uuid} to #{lat},#{lon},#{rad} ... #{title}"
 
 		# turn of assertion catching because there's no point to silently failing ( but leave the transaction block on )
 		#begin
@@ -783,7 +833,7 @@ class TwitterSupport
 		# go ask solr
 		results = []
 		search = [ q[:words].join(" ") ]
-		if lat || lon
+		if search.length && ( lat < 0 || lat > 0 || lon < 0 || lon > 0 )
 			# TODO at some point we should use the range that the user indicates
 			range = 1
 			search << "lat:[#{lat-range} TO #{lat+range}]"
@@ -800,13 +850,16 @@ class TwitterSupport
 										#:order => "id desc",
 										#:operator => "and"
 										)
-			total_hits = results.total_hits
+			total_hits = 0
+			total_hits = results.total_hits if results
 			results = results.docs if results
 			results = [] if !results
 		end
 		q[:search_phrase] = search_phrase 
 		q[:results] = results
 		q[:total_hits] = total_hits
+
+# TODO if there were no people passed... should we do some kind of injection of people in the area?
 
 		# debug show results
 		ActionController::Base.logger.info "Query: results " if results.length > 0

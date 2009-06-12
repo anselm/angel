@@ -1,4 +1,4 @@
-require 'lib/twitter_support.rb'
+# require 'lib/twitter_support.rb'
 
 class NotesController < ApplicationController
 

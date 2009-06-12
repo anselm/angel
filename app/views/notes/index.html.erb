@@ -24,8 +24,8 @@
 	results = @query[:results]
 	results.each do |item|
 		next if !item.lat && !item.lon
-		noisex = (rand(1000)/20000.0)
-		noisey = (rand(1000)/10000.0)
+		noisex = ((rand(1000)-500)/20000.0) 
+		noisey = ((rand(1000)-500)/10000.0)
 		ActionController::Base.logger.info "mapping feature #{item.title} at #{item.lat} and #{item.lon}"
 		@map.feature({
 			:kind => :marker,
@@ -62,8 +62,8 @@
 	results.each do |item|
 		puts "considering party #{item.title} at #{item.lat} and #{item.lon}"
 		next if !item.lat && !item.lon
-		noisex = (rand(1000)/20000.0)
-		noisey = (rand(1000)/10000.0)
+		noisex = ((rand(1000)-500)/20000.0) 
+		noisey = ((rand(1000)-500)/10000.0)
 		ActionController::Base.logger.info "mapping feature #{item.title} at #{item.lat} and #{item.lon}"
 		@map.feature({
 			:kind => :marker,
@@ -100,8 +100,8 @@
 	results[0..100].each do |item|
 		puts "considering party #{item.title} at #{item.lat} and #{item.lon}"
 		next if !item.lat && !item.lon
-		noisex = (rand(1000)/20000.0)
-		noisey = (rand(1000)/10000.0)
+		noisex = ((rand(1000)-500)/20000.0) 
+		noisey = ((rand(1000)-500)/10000.0)
 		ActionController::Base.logger.info "mapping feature #{item.title} at #{item.lat} and #{item.lon}"
 		@map.feature({
 			:kind => :marker,
@@ -124,8 +124,8 @@
 		next if !party.lat && !party.lon
 		@query[:friends].each do |friend|
 			next if !friend.lat && !friend.lon
-			noisex = (rand(1000)/20000.0)
-			noisey = (rand(1000)/10000.0)
+			noisex = ((rand(1000)-500)/20000.0) 
+			noisey = ((rand(1000)-500)/10000.0)
 			@map.feature({
 				:kind => :line,
 				:lat => "#{party.lat+noisex}",
@@ -143,7 +143,9 @@
 
 
 <%= @map.body() %>
-
+<h1>Query</h1>
+Asking for <%=@query[:words].split(' ')%><br/>
+At latitude and longitude <%=@query[:lat]%> and <%=@query[:lon]%>
 <h1>Posts found here</h1>
 <ul>
 <% @query[:results].each do |item| %>
