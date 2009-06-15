@@ -7,7 +7,7 @@ ActionController::Routing::Routes.draw do |map|
   map.signin 'signin', :controller => 'user_sessions', :action => 'new'
   map.signout 'signout', :controller => 'user_sessions', :action => 'destroy'
  
-  map.connect   'update', :controller => 'notes', :action => 'update' 
+  map.xml   'xml', :controller => 'notes', :action => 'xml' 
   # map.connect 'notes/:number', :controller => 'notes', :action => 'search'
   map.resources :notes, :collection => { :search => [:get, :post] }
   map.resources :notes

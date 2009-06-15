@@ -139,7 +139,7 @@ class TwitterSupport
 	def self.unused_twitter_get_parties(names)
 		terms = names.collect { |n| "id='#{n}'" }
 		yql = "http://query.yahooapis.com/v1/public/yql?q="
-		schema = "use 'http://angel.makerlab.org/yql/twitter.user.profile.xml' as party;"
+		schema = "use 'http://xangel.makerlab.org/yql/twitter.user.profile.xml' as party;"
 		query = "select * from party where id = #{terms.join(' or ')}"
 		fragment = "#{schema}#{query}"
 		url = "#{yql}#{url_escape(fragment)};&format=json"
@@ -191,7 +191,8 @@ class TwitterSupport
 		limit = self.twitter_get_remaining_hits
 		old = 4.hours.ago
 		parties.each do |party|
-			if party.updated_at > old  # if updated at time is bigger(newer) than 4 hours agos bigness then skip
+# TODO disabled this for now
+			if false && party.updated_at > old  # if updated at time is bigger(newer) than 4 hours agos bigness then skip
 				ActionController::Base.logger.info "Skip getting friends of #{party.title} - updated recently #{party.updated_at}"
 				party.relation_all_siblings_as_notes(Note::RELATION_FRIEND,nil).each do |party2|
 					results << party2  # TODO sloppy - just use an array concatenation
@@ -359,7 +360,7 @@ class TwitterSupport
 	##########################################################################################################
 	# twitter update a set of party profiles by tracing out friends given twitter ids
 	# TODO switch to yql later?
-	# use 'http://angel.makerlab.org/yql/twitter.user.profile.xml' as party;
+	# use 'http://xangel.makerlab.org/yql/twitter.user.profile.xml' as party;
 	# select * from party where id='anselm';
 	##########################################################################################################
 
@@ -388,7 +389,7 @@ class TwitterSupport
 	# i decided this was a bad idea because what if person x is not on friendfeed? does this read through?
 	# TODO FINISH
 	# TODO we have to find a way to do this asynchronously or cap the returns
-	# use 'http://angel.makerlab.org/yql/twitter.user.timeline.xml' as ff;
+	# use 'http://xangel.makerlab.org/yql/twitter.user.timeline.xml' as ff;
 	# select * from ff where id='anselm';
 	##########################################################################################################
 
@@ -407,7 +408,7 @@ class TwitterSupport
 	##########################################################################################################
 	# yql get the timelines of a pile of people - this is a crude way of seeing somebodys own view of reality
 	# TODO could also maybe do searches and geographic bounds
-	# use 'http://angel.makerlab.org/yql/twitter.user.timeline.xml' as party;select * from party where id = 'anselm' and title like '%humanist%';
+	# use 'http://xangel.makerlab.org/yql/twitter.user.timeline.xml' as party;select * from party where id = 'anselm' and title like '%humanist%';
 	# TODO use more recent than ( cannot do this )
 	# TODO yahoo api rate limits
 	##########################################################################################################
@@ -415,10 +416,12 @@ class TwitterSupport
 	def self.yql_twitter_get_timelines(parties)
 		terms = parties.collect { |n| "id='#{n.title}'" }
 		yql = "http://query.yahooapis.com/v1/public/yql?q="
-		schema = "use 'http://angel.makerlab.org/yql/twitter.user.timeline.xml' as party;"
+		schema = "use 'http://xangel.makerlab.org/yql/twitter.user.timeline.xml' as party;"
 		query = "select * from party where #{terms.join(' or ')}"
 		fragment = "#{schema}#{query}"
 		url = "#{yql}#{url_escape(fragment)};&format=json"
+		ActionController::Base.logger.debug "YQL Using a schema #{schema}"
+		ActionController::Base.logger.debug "YQL Query is #{url}"
 		#response = Hpricot.XML(open(url))
 		response = open(url).read
 		blob = JSON.parse(response)
@@ -582,7 +585,7 @@ class TwitterSupport
 
 		if note
 if lat || lon
-note.update_attributes ( :lat => lat, :lon => lon, :rad => rad )
+note.update_attributes( :lat => lat, :lon => lon, :rad => rad )
 end
 			ActionController::Base.logger.info "Note already found #{uuid} #{title}"
 			return "Note already found #{uuid} #{title}"
@@ -823,6 +826,15 @@ end
 			# if there are no people to anchor the search then just let twitter do the search
 			ActionController::Base.logger.info "query: using a general search strategy looking for #{q[:words].join(' ')} near #{lat} #{lon} #{rad}"
 			self.twitter_search(q[:words],lat,lon,rad)
+
+# after an ordinary twitter search i would like to take the persons that were related to these posts and get them in more detail
+# something like this:
+# and get their friends too...
+# this would help anchor a search quite a bit showing more context
+# later i could even ask yql for those timelines in turn...
+#		q[:parties] = self.twitter_get_parties(q[:partynames])
+#		q[:friends] = self.twitter_get_friends(q[:parties])
+
 		end
 
 		ActionController::Base.logger.info "Query: has finished updating external data sources at time #{Time.now}"
@@ -832,13 +844,13 @@ end
 
 		# go ask solr
 		results = []
-		search = [ q[:words].join(" ") ]
-		if search.length && ( lat < 0 || lat > 0 || lon < 0 || lon > 0 )
+                search = []
+		search << q[:words].join(" ") if q[:words].length > 0
+		if ( lat < 0 || lat > 0 || lon < 0 || lon > 0 )
 			# TODO at some point we should use the range that the user indicates
 			range = 1
 			search << "lat:[#{lat-range} TO #{lat+range}]"
 			search << "lon:[#{lon-range-range} TO #{lon+range+range}]"
-		else
 		end
 		search_phrase = search.join(" AND ")
 		ActionController::Base.logger.info "Query: solr now looking for: #{search_phrase}"

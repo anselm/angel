@@ -100,8 +100,8 @@ class Note
   def relation_add(kind, value, sibling_id = nil)
     relation = relation_first(kind,sibling_id)
 	if relation
-		return if relation.value == value
-		relation.update_attributes(:value => value)
+		# TODO think about this line -> return if relation.value == value
+		relation.update_attributes(:value => value.to_s.strip, :sibling_id => sibling_id )
 		return
 	end
     Relation.create!({

@@ -1,0 +1,3 @@
+#!/bin/csh
+wget "http://xangel.makerlab.org:3000/?q=what+near+banff+canada"
+

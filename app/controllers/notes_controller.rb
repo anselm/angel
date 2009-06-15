@@ -23,10 +23,37 @@ class NotesController < ApplicationController
 
   def index
     @query = TwitterSupport::query(params[:q])
-    respond_to do |format|
-      format.html # index.html.erb
-      format.xml  { render :xml => @query }
+#    respond_to do |format|
+#      format.html # index.html.erb
+#      format.xml  { render :xml => @query }
+#    end
+  end
+
+  def xml
+    # dump a selection of recent activity for purposes of a demo at the banff centre june 12 2009
+    # in combination with a background crontab this is basically just accumulating more data and piping it onwards
+
+    # we'll return a selection of recent posts that can be used to update the globe 
+    @notes = Note.find(:all, :limit => 50, :order => "updated_at DESC", :conditions => { :kind => 'post' } );
+
+    # from those posts I'd like to also return the related users
+    @users = []
+    @notes.each do |note|
+      user = Note.find(:first,:conditions => { :id => note.owner_id, :kind => 'user' } )
+      if user
+        @users << user
+      end
     end
+
+    # from those users I'd like to also add a set of related users so we can map worldwide relationships
+    @users.each do |user|
+
+ #                               party.relation_add(Note::RELATION_FRIEND,1,party2.id)  
+      # 
+    end
+
+    @notes = Note.find(:all, :limit => 50, :order => "updated_at DESC" );
+    render :layout => false
   end
 
   def show
