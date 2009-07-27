@@ -1,0 +1,6 @@
+this is a work in progress
+this is a framework for locative media apps
+it lets you post content and group it
+it also pulls in content and geolocates it from words
+it uses tsearch2 and requires postgresql
+ideas here come from ushahidi as well as earlier work such as thingster
