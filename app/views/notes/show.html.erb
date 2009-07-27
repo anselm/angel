@@ -1,3 +1,10 @@
+<% if @note.photo.exists? then %>
+<%= image_tag @note.photo.url(:small) %><br/>
+<% else %>
+<img src="/images/default.jpg" width="50" height="50" style="border: 4px ridge grey" /><br/>
+<% end %>
+
+
 <p>
   <b>Title:</b>
   <%=h @note.title %>

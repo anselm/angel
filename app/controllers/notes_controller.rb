@@ -2,13 +2,15 @@ require 'lib/twitter_support.rb'
 
 class NotesController < ApplicationController
 
-  before_filter :get_note_from_param
+  before_filter :get_note_from_param, :only => [ :show, :edit, :update, :destroy ]
+
+# TODO
 #  before_filter :verify_member, :only => [ :new, :edit, :update, :destroy ]
 #  before_filter :verify_owner, :only => [ :edit, :update, :destroy ]
 
   def get_note_from_param
     @note = nil
-    @note = Note.find(:first,:id => params[:id]) if params[:id]
+    @note = Note.find_by_id(params[:id].to_i) if params[:id]
     return @note != nil
   end
    
@@ -17,11 +19,22 @@ class NotesController < ApplicationController
     return true 
   end
 
-  def update
-    @results = TwitterSupport.consume
+  #
+  # I'd like the index page to do very little; just show recent posts over the area
+  # The user can use search criteria to refine their post
+  #
+  def index
+    @query = {}
+	if params[:q]
+		@query[:results] = Note.find_by_tsearch(params[:q])
+	else
+		@query[:results] = Note.find(:all,:limit => 100, :offset=> 0, :order => "id desc" )
+	end
+    @query[:parties] = []
+    @query[:friends] = []
   end
 
-  def index
+  def search
     @query = TwitterSupport::query(params[:q])
     respond_to do |format|
       format.html # index.html.erb
@@ -30,11 +43,13 @@ class NotesController < ApplicationController
   end
 
   def show
-    @note = Note.find(params[:id])
     respond_to do |format|
       format.html # show.html.erb
       format.xml  { render :xml => @note }
     end
+  end
+
+  def edit
   end
 
   def new
@@ -43,10 +58,6 @@ class NotesController < ApplicationController
       format.html # new.html.erb
       format.xml  { render :xml => @note }
     end
-  end
-
-  def edit
-    @note = Note.find(params[:id])
   end
 
   def create
@@ -64,7 +75,6 @@ class NotesController < ApplicationController
   end
 
   def update
-    @note = Note.find(params[:id])
     respond_to do |format|
       if @note.update_attributes(params[:note])
         flash[:notice] = 'Note was successfully updated.'
@@ -78,7 +88,6 @@ class NotesController < ApplicationController
   end
 
   def destroy
-    @note = Note.find(params[:id])
     @note.destroy
     respond_to do |format|
       format.html { redirect_to(notes_url) }

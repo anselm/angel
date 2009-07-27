@@ -2,7 +2,7 @@ require 'stemmer'
 require 'hpricot'  
 require 'httpclient'
 require 'json'
-require 'solr'
+#require 'solr'
 
 ###########################################################################################################
 #
@@ -25,23 +25,50 @@ end
 ###########################################################################################################
 
 class Note < ActiveRecord::Base
+
   has_many :relations
-  acts_as_solr :fields => [:title, {:lat=>:range_float}, {:lon=>:range_float}]
+  # acts_as_solr :fields => [:title, {:lat=>:range_float}, {:lon=>:range_float}]
+
+   acts_as_tsearch :fields => ["title","description"]
+
   RELATION_NULL		= "null"
   RELATION_TAG		= "tag"
-  RELATION_OWNER	= "owner"
-  RELATION_FRIEND	= "friend"
-  KIND_NULL = "null"
-  KIND_USER = "user"
-  KIND_POST = "post"
-  KIND_FEED = "feed"
+  RELATION_CATEGORY	= "category"
+  RELATION_ENTITY	= "entity"
+  RELATION_PARENT	= "parent"
+  RELATION_SIBLING	= "sibling"
+  RELATION_OWNER	= "parent"
+  RELATION_FRIEND	= "sibling"
+
+  KIND_NULL		= "null"
+  KIND_USER		= "user"
+  KIND_POST		= "post"
+  KIND_FEED		= "feed"
+  KIND_REPORTER = "user"
+  KIND_REPORT	= "post"
+  KIND_GROUP	= "group"
+  KIND_EVENT	= "event"
+  KIND_PLACE	= "place"
+  KIND_MAP		= "map"
+  KIND_FILTER	= "filter"
+
   STATEBITS_RESERVED = 0
   STATEBITS_RESPONDED = 1
   STATEBITS_UNRESPONDED = 2
   STATEBITS_FRIENDED = 4
   STATEBITS_DIRTY = 8
   STATEBITS_GEOLOCATED = 16 
+
+  # Paperclip
+  has_attached_file :photo,
+    :styles => {
+      :thumb=> "100x100#",
+      :small => "150x150>"
+    }
+ 
 end
+ 
+
 
 ###########################################################################################################
 #
@@ -100,8 +127,8 @@ class Note
   def relation_add(kind, value, sibling_id = nil)
     relation = relation_first(kind,sibling_id)
 	if relation
-		return if relation.value == value
-		relation.update_attributes(:value => value)
+		# TODO think about this line -> return if relation.value == value
+		relation.update_attributes(:value => value.to_s.strip, :sibling_id => sibling_id )
 		return
 	end
     Relation.create!({
@@ -362,17 +389,3 @@ end
 
 
 =end
-
-class Note
-
-=begin
-  # Paperclip
-  has_attached_file :photo,
-    :styles => {
-      :thumb=> "100x100#",
-      :small => "150x150>"
-    }
-=end
- 
-end
- 

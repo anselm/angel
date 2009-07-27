@@ -13,5 +13,5 @@ nbproject/*
 db/db_development
 public/system/photos/*
 public/photos/*
-public/system
+public/system/**/*
 db/schema.rb

@@ -7,6 +7,14 @@ class UsersController < ApplicationController
     @user = User.new
   end
   
+  def show
+    @user = @current_user
+  end
+
+  def edit
+    @user = @current_user
+  end
+  
   def create
     @user = User.new(params[:user])
     if @user.save
@@ -15,14 +23,6 @@ class UsersController < ApplicationController
     else
       render :action => :new
     end
-  end
-  
-  def show
-    @user = @current_user
-  end
-
-  def edit
-    @user = @current_user
   end
   
   def update

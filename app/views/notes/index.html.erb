@@ -27,9 +27,17 @@
 		noisex = (rand(1000)/20000.0)
 		noisey = (rand(1000)/10000.0)
 		ActionController::Base.logger.info "mapping feature #{item.title} at #{item.lat} and #{item.lon}"
+
+
+if item.photo && item.photo.exists?
+  @title = "#{item.title} #{item.description} #{image_tag(item.photo.url(:small))}"
+else
+  @title = "#{item.title} #{item.description}"
+end
+
 		@map.feature({
 			:kind => :marker,
-			:title => "#{item.title} #{item.description}",
+			:title => @title,
 			:lat => "#{item.lat+noisex}",
 			:lon => "#{item.lon+noisey}"
 		})
@@ -143,17 +151,16 @@
 
 
 <%= @map.body() %>
-
+<table width="100%">
+<tr><td valign=top width="50%">
 <h1>Posts found here</h1>
-<ul>
 <% @query[:results].each do |item| %>
-<li><%= item.title %> at <%= item.lat %>, <%=item.lon %> </li>
+<%= item.title %> at <%= item.lat %>, <%=item.lon %><br/> 
 <% end %>
-</ul>
+</td><td valign=top width="50%">
 <h1>Parties found here</h1>
-<ul>
 <% @query[:parties].each do |item| %>
-<li><%= item.title %> at <%= item.lat %>, <%=item.lon %> </li>
+<%= item.title %> at <%= item.lat %>, <%=item.lon %><br/>
 <% end %>
-</ul>
+</td></tr></table>
 

@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="content-type" content="text/html;charset=UTF-8" />
-<title>Ubiquitous Angel <%= controller.controller_name %>: <%= controller.action_name %></title>
+<title></title>
 <%= stylesheet_link_tag 'scaffold' %>
 <%= javascript_include_tag :defaults %>
 <%= @map.header() %>
@@ -14,6 +14,7 @@
 <input type="submit" value="search">
 </form> 
 <%= link_to "Home", "/" %> |
+<%= link_to "New", "/notes/new" %> |
 <% if !current_user %>
   <%= link_to "Register", new_account_path %> |
   <%= link_to "Log In", new_user_session_path %> 
