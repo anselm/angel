@@ -23,8 +23,8 @@ class Geolocate
       case response
       when Net::HTTPSuccess then
         data = JSON.parse(response.body.to_s)
-        lat = data["Locations"][0]["Centroid"]["Latitude"]
-        lon = data["Locations"][0]["Centroid"]["Longitude"]
+        lat = data["Locations"][0]["Centroid"]["Latitude"].to_f
+        lon = data["Locations"][0]["Centroid"]["Longitude"].to_f
         return lat,lon,25
       end
     rescue Timeout::Error
@@ -48,8 +48,8 @@ class Geolocate
   	  when Net::HTTPSuccess then
         doc = Hpricot::XML(response.body)
         (doc/:centroid).each do |node|
-          lat = (node/:latitude).innerHTML
-	      lon = (node/:longitude).innerHTML
+          lat = (node/:latitude).innerHTML.to_f
+	      lon = (node/:longitude).innerHTML.to_f
 	      return lat,lon,25
 	    end
 	  end

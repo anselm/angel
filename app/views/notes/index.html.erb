@@ -24,20 +24,12 @@
 	results = @query[:results]
 	results.each do |item|
 		next if !item.lat && !item.lon
-		noisex = (rand(1000)/20000.0)
-		noisey = (rand(1000)/10000.0)
+		noisex = ((rand(1000)-500)/20000.0) 
+		noisey = ((rand(1000)-500)/10000.0)
 		ActionController::Base.logger.info "mapping feature #{item.title} at #{item.lat} and #{item.lon}"
-
-
-if item.photo && item.photo.exists?
-  @title = "#{item.title} #{item.description} #{image_tag(item.photo.url(:small))}"
-else
-  @title = "#{item.title} #{item.description}"
-end
-
 		@map.feature({
 			:kind => :marker,
-			:title => @title,
+			:title => "#{item.title} #{item.description}",
 			:lat => "#{item.lat+noisex}",
 			:lon => "#{item.lon+noisey}"
 		})
@@ -70,8 +62,8 @@ end
 	results.each do |item|
 		puts "considering party #{item.title} at #{item.lat} and #{item.lon}"
 		next if !item.lat && !item.lon
-		noisex = (rand(1000)/20000.0)
-		noisey = (rand(1000)/10000.0)
+		noisex = ((rand(1000)-500)/20000.0) 
+		noisey = ((rand(1000)-500)/10000.0)
 		ActionController::Base.logger.info "mapping feature #{item.title} at #{item.lat} and #{item.lon}"
 		@map.feature({
 			:kind => :marker,
@@ -108,8 +100,8 @@ end
 	results[0..100].each do |item|
 		puts "considering party #{item.title} at #{item.lat} and #{item.lon}"
 		next if !item.lat && !item.lon
-		noisex = (rand(1000)/20000.0)
-		noisey = (rand(1000)/10000.0)
+		noisex = ((rand(1000)-500)/20000.0) 
+		noisey = ((rand(1000)-500)/10000.0)
 		ActionController::Base.logger.info "mapping feature #{item.title} at #{item.lat} and #{item.lon}"
 		@map.feature({
 			:kind => :marker,
@@ -132,8 +124,8 @@ end
 		next if !party.lat && !party.lon
 		@query[:friends].each do |friend|
 			next if !friend.lat && !friend.lon
-			noisex = (rand(1000)/20000.0)
-			noisey = (rand(1000)/10000.0)
+			noisex = ((rand(1000)-500)/20000.0) 
+			noisey = ((rand(1000)-500)/10000.0)
 			@map.feature({
 				:kind => :line,
 				:lat => "#{party.lat+noisex}",
@@ -151,16 +143,19 @@ end
 
 
 <%= @map.body() %>
-<table width="100%">
-<tr><td valign=top width="50%">
+<h1>Query</h1>
+Asking for <%=@query[:words].split(' ')%><br/>
+At latitude and longitude <%=@query[:lat]%> and <%=@query[:lon]%>
 <h1>Posts found here</h1>
+<ul>
 <% @query[:results].each do |item| %>
-<%= item.title %> at <%= item.lat %>, <%=item.lon %><br/> 
+<li><%= item.title %> at <%= item.lat %>, <%=item.lon %> </li>
 <% end %>
-</td><td valign=top width="50%">
+</ul>
 <h1>Parties found here</h1>
+<ul>
 <% @query[:parties].each do |item| %>
-<%= item.title %> at <%= item.lat %>, <%=item.lon %><br/>
+<li><%= item.title %> at <%= item.lat %>, <%=item.lon %> </li>
 <% end %>
-</td></tr></table>
+</ul>
 
