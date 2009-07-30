@@ -3,10 +3,8 @@
 class NotesController < ApplicationController
 
   before_filter :get_note_from_param, :only => [ :show, :edit, :update, :destroy ]
-
-# TODO
-#  before_filter :verify_member, :only => [ :new, :edit, :update, :destroy ]
-#  before_filter :verify_owner, :only => [ :edit, :update, :destroy ]
+  before_filter :verify_member, :only => [ :new, :edit, :update, :destroy ]
+  before_filter :verify_owner, :only => [ :edit, :update, :destroy ]
 
   def get_note_from_param
     @note = nil
@@ -59,11 +57,9 @@ class NotesController < ApplicationController
     end
 
     # from those users I'd like to also add a set of related users so we can map worldwide relationships
-    @users.each do |user|
-
- #                               party.relation_add(Note::RELATION_FRIEND,1,party2.id)  
-      # 
-    end
+#    @users.each do |user|
+#       party.relation_add(Note::RELATION_FRIEND,1,party2.id)  
+#    end
 
     @notes = Note.find(:all, :limit => 50, :order => "updated_at DESC" );
     render :layout => false

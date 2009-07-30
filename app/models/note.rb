@@ -3,6 +3,7 @@ require 'hpricot'
 require 'httpclient'
 require 'json'
 #require 'solr'
+#require 'enumerated_attribute' does not work with activerecord
 
 ###########################################################################################################
 #
@@ -27,30 +28,29 @@ end
 class Note < ActiveRecord::Base
 
   has_many :relations
-  # acts_as_solr :fields => [:title, {:lat=>:range_float}, {:lon=>:range_float}]
 
-   acts_as_tsearch :fields => ["title","description"]
+  # acts_as_solr :fields => [:title, {:lat=>:range_float}, {:lon=>:range_float}] # slower than heck - using tsearch instead
+  acts_as_tsearch :fields => ["title","description"]
 
-  RELATION_NULL		= "null"
-  RELATION_TAG		= "tag"
-  RELATION_CATEGORY	= "category"
-  RELATION_ENTITY	= "entity"
-  RELATION_PARENT	= "parent"
-  RELATION_SIBLING	= "sibling"
-  RELATION_OWNER	= "parent"
-  RELATION_FRIEND	= "sibling"
+  RELATIONS = %w{
+					RELATION_TAG
+					RELATION_CATEGORY
+					RELATION_ENTITY
+					RELATION_RELATION
+				}
 
-  KIND_NULL		= "null"
-  KIND_USER		= "user"
-  KIND_POST		= "post"
-  KIND_FEED		= "feed"
-  KIND_REPORTER = "user"
-  KIND_REPORT	= "post"
-  KIND_GROUP	= "group"
-  KIND_EVENT	= "event"
-  KIND_PLACE	= "place"
-  KIND_MAP		= "map"
-  KIND_FILTER	= "filter"
+   KINDS = %w{
+					KIND_USER
+					KIND_POST
+					KIND_FEED
+					KIND_REPORTER
+					KIND_REPORT
+					KIND_GROUP
+					KIND_EVENT
+					KIND_PLACE
+					KIND_MAP
+					KIND_FILTER
+				}
 
   STATEBITS_RESERVED = 0
   STATEBITS_RESPONDED = 1
@@ -58,6 +58,12 @@ class Note < ActiveRecord::Base
   STATEBITS_FRIENDED = 4
   STATEBITS_DIRTY = 8
   STATEBITS_GEOLOCATED = 16 
+
+  RELATIONS.each { |k| const_set(k,k) }
+  KINDS.each { |k| const_set(k,k) }
+
+  # enum_attr :METADATA, RELATIONS, :nil => true  # fails with activerecord
+  # enum_attr :KIND, KINDS, :nil => true # fails with activerecord
 
   # Paperclip
   has_attached_file :photo,
@@ -104,7 +110,7 @@ class Note
 
   # TODO rate limit
   # TODO use a join
-  def relation_all_siblings_as_notes(kind = nil, sibling_id = nil)
+  def relation_as_notes(kind = nil, sibling_id = nil)
     query = { :note_id => self.id }
     query[:kind] = kind if kind
     query[:sibling_id] = sibling_id if sibling_id

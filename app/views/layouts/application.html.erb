@@ -8,23 +8,7 @@
 <%= @map.header() %>
 </head>
 <body>
-<div style="float:right">
-<form style="display:inline; padding:0; margin:0;">
-<input type="text" name="q" value="<%=params[:q]%>" size="60">
-<input type="submit" value="search">
-</form> 
-<%= link_to "Home", "/" %> |
-<%= link_to "New", "/notes/new" %> |
-<% if !current_user %>
-  <%= link_to "Register", new_account_path %> |
-  <%= link_to "Log In", new_user_session_path %> 
-<% else %>
-  <%= link_to "My Account", account_path %> |
-  <%= link_to "Logout", user_session_path, :method => :delete %>
-<% end %>
-</div>
-<div style="clear:both"></div>
-<p style="color: green"><%= flash[:notice] %></p>
+<%= render :partial => "layouts/header" %>
 <%= yield  %>
 </body>
 <%= @map.tail() %>

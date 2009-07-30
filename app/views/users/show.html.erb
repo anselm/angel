@@ -5,6 +5,14 @@
 <img src="/images/default.jpg" width="50" height="50" style="border: 4px ridge grey" /><br/>
 <% end %>
 
+<% if @user.admin %>
+
+<a href="/notes_admin">Administer posts</a>
+<a href="/users_admin">Administer users</a>
+<a href="/relations_admin">Administer relations</a>
+
+<% end %>
+
 <p>
   <b>Login:</b>
   <%=h @user.login %>

@@ -1,25 +1,7 @@
-<% if @note.photo.exists? then %>
-<%= image_tag @note.photo.url(:small) %><br/>
-<% else %>
-<img src="/images/default.jpg" width="50" height="50" style="border: 4px ridge grey" /><br/>
+<h1>Show Note</h1>
+<% @interactive = 0 %>
+<% form_for(@note, :url => "/notes/create", :html => { :multipart => true } ) do |f| %>
+<%= render :partial => "form", :object => f %>
 <% end %>
-
-
-<p>
-  <b>Title:</b>
-  <%=h @note.title %>
-</p>
-
-<p>
-  <b>Link:</b>
-  <%=h @note.link %>
-</p>
-
-<p>
-  <b>Description:</b>
-  <%=h @note.description %>
-</p>
-
-
 <%= link_to 'Edit', edit_note_path(@note) %> |
 <%= link_to 'Back', notes_path %>

@@ -143,13 +143,10 @@
 
 
 <%= @map.body() %>
-<h1>Query</h1>
-Asking for <%=@query[:words].split(' ')%><br/>
-At latitude and longitude <%=@query[:lat]%> and <%=@query[:lon]%>
 <h1>Posts found here</h1>
 <ul>
 <% @query[:results].each do |item| %>
-<li><%= item.title %> at <%= item.lat %>, <%=item.lon %> </li>
+<li><a href="/notes/<%=item.id%>"><%= item.title %></a> at <%= item.lat %>, <%=item.lon %> </li>
 <% end %>
 </ul>
 <h1>Parties found here</h1>

@@ -1,9 +1,16 @@
-body { background-color: #fff; color: #333; }
+/* Defaults */
 
-body, p, ol, ul, td {
-  font-family: verdana, arial, helvetica, sans-serif;
-  font-size:   13px;
-  line-height: 18px;
+body { 
+  font-family:Verdana,Arial,Tahoma,Helvetica,sans-serif;
+  height: 100%;
+  font-size: 12px;
+  padding: 10px;
+  padding-left: 20px;
+  margin: 0;
+}
+
+a {
+ text-decoration:none;
 }
 
 pre {
@@ -12,9 +19,28 @@ pre {
   font-size: 11px;
 }
 
-a { color: #000; }
-a:visited { color: #666; }
-a:hover { color: #fff; background-color:#000; }
+h1 {
+  color: #8c4;
+  font-family:"Arial Black",Arial,Verdana,Tahoma,Helvetica,sans-serif;  padding: 0;
+  margin: 0;
+}
+
+h1 a {
+  color: #e73;
+  font-family:"Arial Black",Arial,Verdana,Tahoma,Helvetica,sans-serif;  font-size: 1em;
+  text-transform: lowercase; !important;
+  text-decoration: none !important;
+}
+
+h2 {
+  clear:both;
+  color: #6a2;
+  font-weight: bold;
+  margin: 0px;
+}
+
+
+/* /////////////////////////////////////////////////////////////////////////////////////////////////////// */
 
 .fieldWithErrors {
   padding: 2px;
@@ -52,3 +78,56 @@ a:hover { color: #fff; background-color:#000; }
   list-style: square;
 }
 
+
+/* /////////////////////////////////////////////////////////////////////////////////////////////////////// */
+
+
+form {
+  background-color:#ffd79f;
+  padding-left: 8px;
+  padding-top: 0.5px;
+  padding-bottom: 8px;
+  margin: 0px;
+  width:800px;
+  overflow: hidden;
+}
+
+form .inputdialog { 
+  min-width:200px;
+  width:200px;
+  display:inline-block;
+  height:12px;
+  text-align:right;
+  padding: 4px;
+  font-weight: bold;
+  text-transform:uppercase;
+  font-size: 90%;
+}
+
+form unused_input {
+  padding: 0px;
+  disabled: disabled;
+  margin: 0px;
+  height:14px;
+  clear:both;
+}
+
+.input {
+  padding: 0px;
+  margin: 2px;
+  height:12px;
+  width:2000px;
+  min-width: 2000px;
+  clear:both;
+}
+
+/* /////////////////////////////////////////////////////////////////////////////////////////////////////// */
+
+#footer {
+	text-align: center;
+	clear: both;
+	padding-right:70px;
+	width:707px;
+    bottom: 0;
+    color: #aaa;
+}

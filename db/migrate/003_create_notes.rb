@@ -12,17 +12,18 @@ class CreateNotes < ActiveRecord::Migration
       t.integer  :statebits
       t.integer  :owner_id   # party that made this
       t.integer  :related_id  # a relationship of child parent such as a reply in a tree of messages
-      t.integer  :depth
-      t.integer  :score
 
       t.string   :title
       t.string   :link
       t.text     :description
       t.string   :depiction
       t.string   :location
+      t.string	 :tagstring
       t.float    :lat
       t.float    :lon
       t.float    :rad
+      t.integer  :depth	# zoom depth hint for map view
+      t.integer  :score	# an objective score
       t.datetime :begins
       t.datetime :ends
 

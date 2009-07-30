@@ -1,5 +1,9 @@
 ActionController::Routing::Routes.draw do |map|
  
+  map.resources :notes_admin, :active_scaffold => true
+  map.resources :relations_admin, :active_scaffold => true
+  map.resources :users_admin, :active_scaffold => true
+
   map.resource :account, :controller => "users"
   map.resource :user_session
   map.resources :users

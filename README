@@ -1,6 +1,16 @@
-this is a work in progress
-this is a framework for locative media apps
-it lets you post content and group it
-it also pulls in content and geolocates it from words
-it uses tsearch2 and requires postgresql
-ideas here come from ushahidi as well as earlier work such as thingster
+About
+
+  A locative media framework
+  Based on ideas from Ushahidi and Thingster and others
+
+Plugins
+
+   - tsearch2 requires postgresql as a database
+   - requires keys for a number of third party services
+
+Optional but nice: How I load test and real world data - this loads some data to seed the system with:
+
+  rake db:migrate:redo
+  rake db:seed
+
+
