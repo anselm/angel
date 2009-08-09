@@ -9,6 +9,9 @@
   <%= link_to "Register", new_account_path %> |
   <%= link_to "Log In", new_user_session_path %> 
 <% else %>
+  <% if current_user.admin %>
+  <%= link_to "Admin", "/notes_admin" %> |
+  <% end %>
   <%= link_to "My Account", account_path %> |
   <%= link_to "Logout", user_session_path, :method => :delete %>
 <% end %>

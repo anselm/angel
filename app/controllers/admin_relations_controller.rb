@@ -1,6 +1,6 @@
 require 'note.rb'
 
-class RelationsAdminController < ApplicationController
+class AdminRelationsController < ApplicationController
   before_filter :require_admin
   layout "admin"
   active_scaffold :relation do |config|

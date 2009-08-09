@@ -1,4 +1,4 @@
-class NotesAdminController < ApplicationController
+class AdminNotesController < ApplicationController
   before_filter :require_admin
   layout "admin"
   active_scaffold :note do |config|

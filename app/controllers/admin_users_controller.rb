@@ -1,4 +1,4 @@
-class UsersAdminController < ApplicationController
+class AdminUsersController < ApplicationController
   before_filter :require_admin
   layout "admin"
   active_scaffold :user do |config|
