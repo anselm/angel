@@ -18,7 +18,7 @@ ActionController::Routing::Routes.draw do |map|
  
   # general activities
   # map.admin 'admin', :controller => 'notes', :action => 'admin'
-  map.root :controller => 'notes', :action => 'index'
+  map.root :controller => 'index', :action => 'index'
  
   map.connect ':controller/:action/:id'
   map.connect ':controller/:action/:id.:format'

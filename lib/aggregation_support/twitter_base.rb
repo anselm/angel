@@ -6,10 +6,6 @@ require 'json'
 require 'lib/geolocate.rb'
 require 'twitter'
 
-#
-# A utility class that is actually tightly coupled to the specific datamodel used here
-# Didn't want to burden model with this because I want to abstract and reuse it somehow
-#
 class AggregationSupport
 
 	###########################################################################################

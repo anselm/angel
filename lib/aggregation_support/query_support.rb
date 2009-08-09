@@ -1,13 +1,9 @@
 
 ############################################################################################
 #
-# Query Construction
+# Queries
 #
 # Queries are used to help seed the aggregation engine - which runs asynchronously
-#
-# Returns
-#
-# 	return { :words => words, :partynames => partynames, :placenames => placenames }
 #
 # A query may consist of
 #   1) a person or persons expressed in the @twitter nomenclature for now
@@ -25,10 +21,13 @@
 ############################################################################################
 
 require 'lib/aggregation_support/twitter_support.rb'
+require 'lib/aggregation_support/twitter_collect.rb'
+require 'lib/aggregation_support/twitter_aggregate.rb'
 
 class AggregationSupport
 
 	# pull out persons, search terms and tags, location such as "@anselm pizza near portland oregon"
+	# TODO should publish the query so everybody can see what everybody is searching for
 	def self.query_parse(phrase)
 		words = []
 		partynames = []
@@ -54,13 +53,9 @@ class AggregationSupport
 	end
 
 	#
-	# parse the query and then talk to a geocoder and to twitter to build an enhanced query
+	# get query location
 	#
-	def self.query_enhanced(phrase)
-
-		ActionController::Base.logger.info "Query: beginning at time #{Time.now}"
-
-		q = self.query_parse(phrase)
+	def self.query_locate(q)
 
 		# get time
 		# TODO implement
@@ -73,31 +68,15 @@ class AggregationSupport
 		q[:lat],q[:lon],q[:rad] = lat,lon,rad
 		ActionController::Base.logger.info "query: geolocated the query #{q[:placenames].join(' ')} to #{lat} #{lon} #{rad}"
 
-		# did the user supply some people as the anchor of a search?
-		# refresh them and get their friends ( this is cheap and can be done synchronously )
-		q[:parties] = self.twitter_get_parties(q[:partynames])
-		q[:friends] = self.twitter_get_friends(q[:parties])
-
-		# get the extended first level network of aquaintances ... this is expensive
-		# q[:acquaintances] = self.twitter_get_friends(q[:friends])
-
 		return q
+
 	end
 
-=begin
+	=begin
 	def self.query_with_solr(phrase)
-		q = self.query_enhanced(phrase)
-		# go ask solr
-		radius = 1 # TODO bad
-		total_hits = 0
-		results = []
-		search = []
-		search << q[:words].join(" ") if q[:words].length > 0
-		lat,lon,rad = q[:lat],q[:lon],q[:rad]
 		if ( lat < 0 || lat > 0 || lon < 0 || lon > 0 )
-			range = 1
-			search << "lat:[#{lat-range} TO #{lat+range}]"
-			search << "lon:[#{lon-range-range} TO #{lon+range+range}]"
+			search << "lat:[#{lat-rad} TO #{lat+rad}]"
+			search << "lon:[#{lon-rad-rad} TO #{lon+rad+rad}]"
 		end
 		search_phrase = search.join(" AND ")
 		ActionController::Base.logger.info "Query: solr now looking for: #{search_phrase}"
@@ -113,17 +92,18 @@ class AggregationSupport
 			results = results.docs if results
 			results = [] if !results
 		end
-		q[:search_phrase] = search_phrase 
-		q[:results] = results
-		q[:total_hits] = total_hits
+		ActionController::Base.logger.info "Query: solr now done"
 	end
-=end
+	=end
 
 	def self.query(phrase)
 
-		q = self.query_enhanced(phrase)
+		q = self.query_parse(phrase)
+		self.query_locate(q)
+		self.aggregate_memoize(q)
 
-		radius = 1 # TODO improve
+		# now look at our internal database and return best results
+
 		total_hits = 0
 		results = []
 		search = []
@@ -131,12 +111,13 @@ class AggregationSupport
 		search_phrase = ""
 		search_phrase = search.join(" ") if search.length > 0
 		lat,lon,rad = q[:lat],q[:lon],q[:rad]
+		rad = 1 # TODO remove this constraint
 
 		ActionController::Base.logger.info "Query: now looking for: #{search_phrase}"
 
 		if ( lat < 0 || lat > 0 || lon < 0 || lon > 0 )
-			total_hits = Note.count(:conditions =>  ["lat >= ? AND lat <= ? AND lon >= ? AND lon <= ?", lat-range,lat+range,lon-range,lon+range ] )
-			results = Note.all(:conditions =>  ["lat >= ? AND lat <= ? AND lon >= ? AND lon <= ?", lat-range,lat+range,lon-range,lon+range ] )
+			total_hits = Note.count(:conditions =>  ["lat >= ? AND lat <= ? AND lon >= ? AND lon <= ?", lat-rad,lat+rad,lon-rad,lon+rad ] )
+			results = Note.all(:conditions =>  ["lat >= ? AND lat <= ? AND lon >= ? AND lon <= ?", lat-rad,lat+rad,lon-rad,lon+rad ] )
 		else
 			# TODO combine not eor
 			results = Note.find_by_tsearch(search_phrase) if search.length > 0

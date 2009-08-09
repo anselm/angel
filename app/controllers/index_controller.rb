@@ -2,7 +2,14 @@ require 'lib/aggregation/query_support.rb'
 
 class IndexController < ApplicationController
 
+  #
+  # show a default view and also deal with searches
+  # the query can supply people, search terms and a location
+  # the results will always only search over people currently being aggregated and will further constrain by the search term if supplied
+  # all queries always have location
+  #
   def index
+
 
 =begin
 	- when you submit a query the map coordinates must be injected as well
@@ -11,7 +18,6 @@ class IndexController < ApplicationController
 			- and to collect keywords over a geography for a week only separately; or maybe we only collect users over time as a rule
 	- i would not mind delaying the query results for a moment so that there could be some content
 	- i should keep in mind generic uses of this code to just search for local activity
-	- make the view hook up to this now
 =end
 
 	@query = AggregationSupport::query(params[:q])
