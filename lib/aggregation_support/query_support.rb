@@ -20,7 +20,7 @@
 #
 ############################################################################################
 
-require 'lib/aggregation_support/twitter_support.rb'
+require 'lib/aggregation_support/twitter_base.rb'
 require 'lib/aggregation_support/twitter_collect.rb'
 require 'lib/aggregation_support/twitter_aggregate.rb'
 
@@ -72,7 +72,7 @@ class AggregationSupport
 
 	end
 
-	=begin
+=begin
 	def self.query_with_solr(phrase)
 		if ( lat < 0 || lat > 0 || lon < 0 || lon > 0 )
 			search << "lat:[#{lat-rad} TO #{lat+rad}]"
@@ -94,9 +94,12 @@ class AggregationSupport
 		end
 		ActionController::Base.logger.info "Query: solr now done"
 	end
-	=end
+=end
 
-	def self.query(phrase)
+	def self.query(params)
+
+		phrase = params[:q]
+		# pull out lat and lon and stuff too
 
 		q = self.query_parse(phrase)
 		self.query_locate(q)

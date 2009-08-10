@@ -20,6 +20,8 @@ class AggregationSupport
 
 		ActionController::Base.logger.info "Query: aggregation of a query starting #{Time.now}"
 
+		lat,lon,rad = q[:lat],q[:lon],q[:rad]
+
 		# did the user supply some people as the anchor of a search?
 		# refresh them and get their friends ( this is cheap and can be done synchronously )
 		q[:parties] = self.twitter_get_parties(q[:partynames])
@@ -52,20 +54,18 @@ class AggregationSupport
 			end
 		else
 
-			# if there are no people to anchor the search then just let twitter do the search
-			ActionController::Base.logger.info "query: using a general search strategy looking for #{q[:words].join(' ')} near #{lat} #{lon} #{rad}"
-			self.twitter_search(q[:words],lat,lon,rad)
+		# if there are no people to anchor the search then just let twitter do the search
+		ActionController::Base.logger.info "query: using a general search strategy looking for #{q[:words].join(' ')} near #{lat} #{lon} #{rad}"
+		self.twitter_search(q[:words],lat,lon,rad)
 
-			# TODO idea
-			# after an ordinary twitter search i would like to take the persons that were related to these posts and get them in more detail
-			# something like this:
-			# and get their friends too...
-			# this would help anchor a search quite a bit showing more context
-			# later i could even ask yql for those timelines in turn...
-			#		q[:parties] = self.twitter_get_parties(q[:partynames])
-			#		q[:friends] = self.twitter_get_friends(q[:parties])
-
-		end
+		# TODO idea
+		# after an ordinary twitter search i would like to take the persons that were related to these posts and get them in more detail
+		# something like this:
+		# and get their friends too...
+		# this would help anchor a search quite a bit showing more context
+		# later i could even ask yql for those timelines in turn...
+		#		q[:parties] = self.twitter_get_parties(q[:partynames])
+		#		q[:friends] = self.twitter_get_friends(q[:parties])
 
 		ActionController::Base.logger.info "Query: aggregation of a set has finished updating external data sources at time #{Time.now}"
 

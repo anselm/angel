@@ -181,12 +181,14 @@ ENDING
   def tail()
 <<ENDING
 <script defer>
-var map_marker_chase = false;
+var map_location_callback = true;
 var use_google_popup = true;
 var use_pd_popup = false;
 var use_tooltips = false;
 var map_div = null;
 var map = null;
+var map_longitude = 0;
+var map_latitude = 0;
 var mgr = null;
 var map_icons = [];
 var map_markers = [];
@@ -272,14 +274,16 @@ function mapper_callback() {
   if(#{@map_cover_all_points}) {
      mapper_center();
   }
-  // an optional centering beacon
-  if(map_marker_chase) {
+  // capture map location
+  if(map_location_callback) {
     GEvent.addListener(map, "moveend", function() {
-      var center = map.getCenter();
-      mapper_save_location(center);
-      mapper_set_marker(center);
+      mapper_save_location();
+      // var center = map.getCenter();
+      // mapper_set_marker(center);
     });
   }
+  // also capture map location once at least
+  mapper_save_location();
 }
 /// javascript: center over predefined set 
 function mapper_center() {
@@ -358,7 +362,19 @@ function mapper_inject(features) {
     }
   }
 }
-/// convenience utility: look for an input dialog which may help determine current map focus or other map state
+/// saving the map location to a hidden input if found
+function mapper_save_location(center) {
+  var center = map.getCenter();
+  var x = document.getElementById("note[longitude]");
+  var y = document.getElementById("note[latitude]");
+  if(x && y) {
+    x.value = center.lat();
+    y.value = center.lng();
+  }
+  map_latitude = center.lat();
+  map_longitude = center.lng();
+}
+/// convenience utility: page refresh may supply map location
 function mapper_get_location() {
   var x = document.getElementById("note[longitude]");
   var y = document.getElementById("note[latitude]");

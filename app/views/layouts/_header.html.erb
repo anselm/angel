@@ -1,7 +1,9 @@
 <div style="float:right">
 <form style="display:inline; padding:0; margin:0;">
-<input type="text" name="q" value="<%=params[:q]%>" size="60">
-<input type="submit" value="search">
+<input type="text" name="q" value="<%=params[:q]%>" size="60" />
+<input type="text" name="latitude" value="0" />
+<input type="text" name="longitude" value="0" />
+<input type="submit" value="search" />
 </form> 
 <%= link_to "Home", "/" %> |
 <%= link_to "New", "/notes/new" %> |

@@ -1,27 +1,18 @@
-require 'lib/aggregation/query_support.rb'
+require 'lib/aggregation_support/query_support.rb'
 
 class IndexController < ApplicationController
 
   #
-  # show a default view and also deal with searches
-  # the query can supply people, search terms and a location
-  # the results will always only search over people currently being aggregated and will further constrain by the search term if supplied
-  # all queries always have location
+  # handles searches
+  # one note is that this code in general is used for a bare bones locative app as well and searches should be a part of that
+  # for bare bones use we really just want to show places and maps meeting a criteria - and not do any aggregation
   #
   def index
 
+	# TODO pass in map coordinates.
+	# TODO move the aggregation features off to one side and have an ordinary local search capability
 
-=begin
-	- when you submit a query the map coordinates must be injected as well
-	- i do not yet actually store any state for the aggregator to use and i should do so
-			- a good approach is to just collect users for a week only
-			- and to collect keywords over a geography for a week only separately; or maybe we only collect users over time as a rule
-	- i would not mind delaying the query results for a moment so that there could be some content
-	- i should keep in mind generic uses of this code to just search for local activity
-=end
-
-	@query = AggregationSupport::query(params[:q])
-
+	@query = AggregationSupport::query(params)
   end
 
   # TEST
