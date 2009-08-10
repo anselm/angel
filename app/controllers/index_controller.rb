@@ -1,4 +1,4 @@
-require 'lib/aggregation_support/query_support.rb'
+require 'lib/content_support/query_support.rb'
 
 class IndexController < ApplicationController
 

@@ -1,7 +1,7 @@
 # Filters added to this controller apply to all controllers in the application.
 # Likewise, all the methods added will be available for all controllers.
 
-require "lib/dynamapper.rb"
+require "lib/dynamapper/dynamapper.rb"
 
 class ApplicationController < ActionController::Base
   helper :all
