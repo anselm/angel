@@ -20,9 +20,9 @@
 #
 ############################################################################################
 
-require 'lib/aggregation_support/twitter_base.rb'
-require 'lib/aggregation_support/twitter_collect.rb'
-require 'lib/aggregation_support/twitter_aggregate.rb'
+require 'lib/content_support/twitter_base.rb'
+require 'lib/content_support/twitter_collect.rb'
+require 'lib/content_support/twitter_aggregate.rb'
 
 class AggregationSupport
 

@@ -6,7 +6,7 @@ require 'json'
 require 'lib/geolocate.rb'
 require 'twitter'
 
-class AggregationSupport
+class TwitterSupport
 
 	###########################################################################################
 	# encode url

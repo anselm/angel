@@ -1,6 +1,7 @@
 
+require 'lib/twitter_support/twitter_base.rb'
 
-class AggregationSupport
+class TwitterSupport
 
 	##########################################################################################################
 	# collect results from twitter search that might interest us; location,rad,topic.

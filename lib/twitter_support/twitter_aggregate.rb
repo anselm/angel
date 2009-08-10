@@ -12,11 +12,15 @@
 # The aggregator avoids rate limits
 #
 
-require 'lib/aggregation_support/reaper_support.rb'
+require 'lib/twitter_support/twitter_base.rb'
+require 'lib/twitter_support/twitter_collect.rb'
+require 'lib/twitter_support/twitter_reap.rb'
 
-class AggregationSupport
+class TwitterSupport
 
 	def self.aggregate(q)
+
+		# reap old data TODO
 
 		ActionController::Base.logger.info "Query: aggregation of a query starting #{Time.now}"
 
