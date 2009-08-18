@@ -1,3 +1,4 @@
+public/text/*.pdf
 .svn
 solr/**/*
 log/*.log

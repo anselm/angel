@@ -21,6 +21,10 @@ class IndexController < ApplicationController
 	render :json => @query.to_json
   end
 
+  def about
+    render :layout => 'static'
+  end
+
   #
   # below is a test for flash globe - merge in above or throw away TODO
   #
