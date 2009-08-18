@@ -142,7 +142,7 @@ class TwitterSupport
 	##########################################################################################################
 	# twitter update a set of party profiles by tracing out friends given twitter ids
 	# TODO switch to yql later?
-	# use 'http://xangel.makerlab.org/yql/twitter.user.profile.xml' as party;
+	# use 'http://angel.makerlab.org/yql/twitter.user.profile.xml' as party;
 	# select * from party where id='anselm';
 	##########################################################################################################
 
@@ -171,7 +171,7 @@ class TwitterSupport
 	# i decided this was a bad idea because what if person x is not on friendfeed? does this read through?
 	# TODO FINISH
 	# TODO we have to find a way to do this asynchronously or cap the returns
-	# use 'http://xangel.makerlab.org/yql/twitter.user.timeline.xml' as ff;
+	# use 'http://angel.makerlab.org/yql/twitter.user.timeline.xml' as ff;
 	# select * from ff where id='anselm';
 	##########################################################################################################
 
@@ -190,7 +190,7 @@ class TwitterSupport
 	##########################################################################################################
 	# yql get the timelines of a pile of people - this is a crude way of seeing somebodys own view of reality
 	# TODO could also maybe do searches and geographic bounds
-	# use 'http://xangel.makerlab.org/yql/twitter.user.timeline.xml' as party;select * from party where id = 'anselm' and title like '%humanist%';
+	# use 'http://angel.makerlab.org/yql/twitter.user.timeline.xml' as party;select * from party where id = 'anselm' and title like '%humanist%';
 	# TODO use more recent than ( cannot do this )
 	# TODO yahoo api rate limits
 	##########################################################################################################

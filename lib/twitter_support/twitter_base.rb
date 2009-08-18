@@ -300,7 +300,7 @@ end
 	def self.unused_twitter_get_parties(names)
 		terms = names.collect { |n| "id='#{n}'" }
 		yql = "http://query.yahooapis.com/v1/public/yql?q="
-		schema = "use 'http://xangel.makerlab.org/yql/twitter.user.profile.xml' as party;"
+		schema = "use 'http://angel.makerlab.org/yql/twitter.user.profile.xml' as party;"
 		query = "select * from party where id = #{terms.join(' or ')}"
 		fragment = "#{schema}#{query}"
 		url = "#{yql}#{url_escape(fragment)};&format=json"
