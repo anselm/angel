@@ -199,7 +199,7 @@ class TwitterSupport
 
 		terms = parties.collect { |n| "id='#{n.title}'" }
 		yql = "http://query.yahooapis.com/v1/public/yql?q="
-		schema = "use 'http://xangel.makerlab.org/yql/twitter.user.timeline.xml' as party;"
+		schema = "use 'http://angel.makerlab.org/yql/twitter.user.timeline.xml' as party;"
 		query = "select * from party where #{terms.join(' or ')}"
 		fragment = "#{schema}#{query}"
 		url = "#{yql}#{url_escape(fragment)};&format=json"

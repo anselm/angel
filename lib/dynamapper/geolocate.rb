@@ -5,8 +5,16 @@ require 'open-uri'
 require 'hpricot'
 require 'json'
 
+class Dynamapper
 
-class Geolocate
+  def self.geolocate(text)
+    name = SETTINGS[:site_metacarta_userid]
+    password = SETTINGS[:site_metacarta_pass]
+    key = SETTINGS[:site_metacarta_key]
+    lat,lon,rad = self.geolocate_via_metacarta(text,name,password,key)
+    ActionController::Base.logger.info "geolocator at work: #{text} set to #{lat} #{lon} #{rad}"
+    return lat,lon,rad
+  end
 
   # return latitude,longitude,kilometers or return a point off the coast of africa that means nil
   def self.geolocate_via_metacarta(text,name,password,key)

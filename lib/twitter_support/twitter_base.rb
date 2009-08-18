@@ -3,7 +3,7 @@ require 'uri'
 require 'open-uri'
 require 'hpricot'
 require 'json'
-require 'lib/geolocate.rb'
+require 'lib/dynamapper/geolocate.rb'
 require 'twitter'
 
 class TwitterSupport
@@ -19,17 +19,8 @@ class TwitterSupport
 	end
 
 	###########################################################################################
-	# geolocate
+	# geolocate all existing content - convenience utility
 	###########################################################################################
-
-	def self.geolocate(text)
-		name = SETTINGS[:site_metacarta_userid]
-		password = SETTINGS[:site_metacarta_pass]
-		key = SETTINGS[:site_metacarta_key]
-		lat,lon,rad = Geolocate.geolocate_via_metacarta(text,name,password,key)
-		ActionController::Base.logger.info "geolocator at work: #{text} set to #{lat} #{lon} #{rad}"
-		return lat,lon,rad
-	end
 
 	def self.geolocate_all
 		all = Note.find_by_sql("select * from notes where !(statebits & #{Note::STATEBITS_GEOLOCATED})")
@@ -153,7 +144,7 @@ class TwitterSupport
 						 })
 
 		# always re geolocate the party
-		lat,lon,rad = self.geolocate(location)
+		lat,lon,rad = Dynamapper.geolocate(location)
 		if !lat && !lon
 			lat = fallback_lat if fallback_lat
 			lon = fallback_lon if fallback_lon
@@ -216,7 +207,7 @@ class TwitterSupport
 
 		# try geolocate on content or party 
 		#- TODO the post itself also includes party information for that moment in time - try?
-		lat,lon,rad = self.geolocate(title)
+		lat,lon,rad = Dynamapper.geolocate(title)
 		if !lat && !lon 
 			lat = party.lat
 			lon = party.lon

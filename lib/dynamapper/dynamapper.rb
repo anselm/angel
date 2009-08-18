@@ -1,9 +1,12 @@
 # module Dynamap
 
-require 'lib/gmap.rb'
+require 'lib/dynamapper/gmap.rb'
 
 #
 # Dynamapper
+#
+# A google maps helper for rails
+#
 # This was written for call2action but was never used - it is public domain - anselm hook
 # 
 # To use this class the developer MUST follow a pattern like this:
@@ -29,6 +32,17 @@ require 'lib/gmap.rb'
 
 class Dynamapper
 
+  attr_accessor :apikey
+  attr_accessor :map_cover_all_points
+  attr_accessor :lat
+  attr_accessor :lon
+  attr_accessor :width
+  attr_accessor :height
+  attr_accessor :zoom
+  attr_accessor :map_type
+  attr_accessor :features
+  attr_accessor :map_usercallback
+
   #
   # initialize()
   # 
@@ -38,10 +52,11 @@ class Dynamapper
     @lat = args[:latitude] || 45.516510
     @lon = args[:longitude] || -122.678878
     @width = args[:width] || "100%"
-    @height = args[:height] || "340px"
+    @height = args[:height] || "440px"
     @zoom = args[:zoom] || 9 
     @map_type = "G_SATELLITE_MAP"
     @features = []
+	@map_usercallback = "map_user_initialize"
   end
 
   #
@@ -181,6 +196,11 @@ ENDING
   def tail()
 <<ENDING
 <script defer>
+
+/******************************************************************************************************************************************/
+// definitions
+/******************************************************************************************************************************************/
+
 var map_location_callback = true;
 var use_google_popup = true;
 var use_pd_popup = false;
@@ -197,6 +217,8 @@ var lat = 28.000;
 var lon = -90.500;
 var zoom = 9;
 var map_markers_raw = #{@features.to_json};
+var map_features = {}
+var map_api_calback = "/json"
 
 var icons = [ "weather-storm.png",
 "weather-snow.png",
@@ -227,6 +249,10 @@ var icons = [ "weather-storm.png",
 var base_icon;
 var icon_index = 0;
 
+/******************************************************************************************************************************************/
+// helper utilities
+/******************************************************************************************************************************************/
+
 /// convenience utility: drag event handler
 function mapper_disable_dragging() {
   if( map ) map.disableDragging();
@@ -234,16 +260,6 @@ function mapper_disable_dragging() {
 /// convenience utility: drag event handler
 function mapper_enable_dragging() {
   if( map ) map.enableDragging();
-}
-/// start mapping engine
-function mapper_start() {
-  if(map_div) return;
-  map_div = document.getElementById("map");
-  if(!map_div) return;
-  if (!GBrowserIsCompatible()) return;
-  mapper_callback();
-  // google.setOnLoadCallback(mapper_callback);
-  // google.load("maps", "2.x");
 }
 /// mapper icon support
 function mapper_icons() {
@@ -254,36 +270,10 @@ function mapper_icons() {
 	base_icon.iconAnchor = new GPoint(9, 34);
 	//base_icon.infoWindowAnchor = new GPoint(9, 2);
 }
-/// mapping engine setup
-function mapper_callback() {
-  // start but dont start twice
-  if(map) return;
-  map = new GMap2(document.getElementById("map"));
-  // map = new google.maps.Map2(document.getElementById("map"));
-  var mapControl = new GMapTypeControl();
-  map.addControl(mapControl);
-  map.addControl(new GSmallMapControl());
-  // setup custom icon support
-  mapper_icons();
-  // map.removeMapType(G_HYBRID_MAP);
-  // set centering even if overriden otherwise google maps fails sometimes
-  map.setCenter((new GLatLng(#{@lat},#{@lon})),#{@zoom}, #{@map_type});
-  // add features dynamically
-  mapper_inject(map_markers_raw);
-  // set centering on markers if preferred
-  if(#{@map_cover_all_points}) {
-     mapper_center();
-  }
-  // capture map location
-  if(map_location_callback) {
-    GEvent.addListener(map, "moveend", function() {
-      mapper_save_location();
-      // var center = map.getCenter();
-      // mapper_set_marker(center);
-    });
-  }
-  // also capture map location once at least
-  mapper_save_location();
+/// add a map centering marker - unused
+function mapper_center_marker() {	  
+  var center = map.getCenter();
+  //mapper_set_marker(center);
 }
 /// javascript: center over predefined set 
 function mapper_center() {
@@ -297,7 +287,7 @@ function mapper_center() {
   if(thezoom > 15 ) thezoom = 15;
   map.setCenter( bounds.getCenter( ), thezoom );
 }
-/// must be a separate function for closure : add a marker
+/// add a marker [ must be a separate function for closure ]
 function mapper_create_marker(point,title) {
   var number = map_markers.length
   var marker_options = { title:title }
@@ -314,12 +304,87 @@ function mapper_create_marker(point,title) {
   map.addOverlay(marker);
   return marker;
 }
-/// javascript: add new features 
-function mapper_inject(features) {
-  if(!features || !map) return;
-  var j=features.length;
-  for(var i=0;i<j;i++) {
-    var feature = features[i];
+/// saving the map location to a hidden input form if found [ very convenient for say telling server about location of a search form submission ]
+function mapper_save_location(center) {
+  if(map == null ) return;
+  var center = map.getCenter();
+  if(center == null) return;
+  var x = document.getElementById("longitude");
+  var y = document.getElementById("latitude");
+  if(x && y) {
+    x.value = center.lat();
+    y.value = center.lng();
+  }
+  map_latitude = center.lat();
+  map_longitude = center.lng();
+}
+/// convenience utility: page refresh may supply map location [ this is the opposite ]
+function mapper_get_location() {
+  var x = document.getElementById("note[longitude]");
+  var y = document.getElementById("note[latitude]");
+  if(x && y ) {
+    x = parseFloat(x.value);
+    y = parseFloat(y.value);
+  }
+  if(x && y && ( x >= -180 && x <= 180 ) && (y >= -90 && y <= 90) ) {
+    return new google.maps.LatLng(y,x);
+  }
+  return new google.maps.LatLng(lat,lon);
+}
+
+/******************************************************************************************************************************************/
+// duplicate tracking
+/******************************************************************************************************************************************/
+
+// a list tracking all features active on the screen so that we can not re-create ones that already exist
+var mapper_features = {};
+// do we already have this feature on the screen? caller has to construct and supply a unique key signature identifying this object
+function mapper_feature_exists_test_and_mark(key) {
+	var feature = mapper_features[key];
+	if(feature != null) {
+		feature.stale = false;
+		return true;
+	}
+	return false;
+}
+// visit all features and mark them as stale; this is done prior to adding more data to a view as an efficiency measure
+function mapper_mark_all_stale() {
+	for(var key in mapper_features) {
+		var feature = mapper_features[key];
+		if(feature != null) {
+			feature.stale = true;
+		}
+	}
+}
+// mark this feature as not stale
+function mapper_track_and_mark_not_stale(pointer,key) {
+	pointer.stale = false;
+	mapper_features[key] = pointer;
+}
+// hide all stale features ; arguably to save memory we could actually remove these features but unsure if javascript conserves memory like so anyway
+function mapper_hide_stale() {
+	for(var key in mapper_features) {
+		var feature = mapper_features[key];
+		if(feature != null && feature.stale == true) {
+			feature.hide(); // removeOverlay();
+		}
+	}
+}
+
+function mapper_make_key(feature) {
+	var key = feature["lat"] + ":" + feature["lon"] + ":" + feature["title"];
+	return key;
+}
+
+
+/******************************************************************************************************************************************/
+// do actual meat of binding our fairly generic system to google maps - add a feature to google maps
+/******************************************************************************************************************************************/
+
+/// javascript: try to get feature up
+function mapper_inject_feature(feature) {
+
+  if(feature) {
 	/*
 	if(feature.kind == "icon_numbered") {
 		var icon = new GIcon(base_icon);
@@ -337,10 +402,20 @@ function mapper_inject(features) {
       map_icons.push(icon);
     }
     else if( feature.kind == "marker" ) {
-      var ll = new GLatLng(feature["lat"],feature["lon"]);
+      var key = mapper_make_key(feature);
+	  if(mapper_feature_exists_test_and_mark(key)) {
+		return;
+	  }
+
+      // Slightly randomize the map position of marker so markers do not always overlap
+      var randx = Math.random()*0.01 - 0.005;
+      var randy = Math.random()*0.01 - 0.005;
+
+      var ll = new GLatLng(feature["lat"] + randy ,feature["lon"] + randx);
       var title = feature["title"];
       var marker = mapper_create_marker(ll,title);
       if(feature["style"] == "show") { GEvent.trigger(marker,"click"); }
+	  mapper_track_and_mark_not_stale(marker,key);
     }
     else if( feature.kind == "line") {
       var p1 = new GLatLng(feature["lat"],feature["lon"]);
@@ -362,32 +437,180 @@ function mapper_inject(features) {
     }
   }
 }
-/// saving the map location to a hidden input if found
-function mapper_save_location(center) {
-  var center = map.getCenter();
-  var x = document.getElementById("note[longitude]");
-  var y = document.getElementById("note[latitude]");
-  if(x && y) {
-    x.value = center.lat();
-    y.value = center.lng();
+/// javascript: add a whole pile of new features 
+function mapper_inject(features) {
+  if(!features || !map) return;
+  var j=features.length;
+  for(var i=0;i<j;i++) {
+    var feature = features[i];
+    mapper_inject_feature(feature);
   }
-  map_latitude = center.lat();
-  map_longitude = center.lng();
 }
-/// convenience utility: page refresh may supply map location
-function mapper_get_location() {
-  var x = document.getElementById("note[longitude]");
-  var y = document.getElementById("note[latitude]");
-  if(x && y ) {
-    x = parseFloat(x.value);
-    y = parseFloat(y.value);
-  }
-  if(x && y && ( x >= -180 && x <= 180 ) && (y >= -90 && y <= 90) ) {
-    return new google.maps.LatLng(y,x);
-  }
-  return new google.maps.LatLng(lat,lon);
+
+/******************************************************************************************************************************************/
+// paint markers - this is somewhat application specialized and could be separated away
+/******************************************************************************************************************************************/
+
+//
+// Paint a display in js
+//
+var mapper_page_update_already_busy = 0;
+function mapper_page_paint(blob) {
+
+	if(mapper_page_update_already_busy) { return true; }
+	mapper_page_update_already_busy = 1;
+
+	var dom_status = document.getElementById("status");
+	var dom_posts = document.getElementById("posts");
+	var dom_people = document.getElementById("parties");
+
+	var search = blob['search'];
+	var markers = blob['results'];
+	var words = blob['words'];
+
+	// Set iconography
+	var feature = {};
+	feature["kind"] = "icon";
+	feature["image"] = "/dynamapper/icons/weather-clear.png";
+	feature["iconSize"] = [ 32, 32 ];
+	feature["iconAnchor"] = [ 9, 34 ];
+	feature["iconWindowAnchor"] = [ 9, 2 ];
+	mapper_inject_feature(feature);
+
+	// mark all objects as stale
+	mapper_mark_all_stale();
+
+	// visit all the markers and add them
+	for (var i=0; i<markers.length; i++) {
+
+		var item = markers[i]['note'];
+
+		var key = mapper_make_key(item);
+		if( mapper_feature_exists_test_and_mark(key) ) {
+			continue;
+		}
+
+		var id = item['id'];
+		var kind = item['kind'];
+		var lat = item['lat'];
+		var lon = item['lon'];
+		var title = item['title'];
+		var link = item['link'];
+		var description = item['description'];
+		var location = item['location'];
+		var created_at = item['created_at'];
+		var tagstring = item['tagstring'];
+		var statebits = item['statebits'];
+		var photo_file_name = item['photo_file_name'];
+		var photo_content_type = item['photo_content_type'];
+		var provenance = item['provenance'];
+		var owner_id = item['owner_id'];
+		var begins = item['begins'];
+		var ends = item['ends'];
+
+		// TODO - i should publish all related parties
+		// TODO - i should publish all the depictions
+		// TODO - also publish all the relationships
+
+		// Build map feature
+		var feature = {};
+		feature["kind"] = "marker";
+		feature["title"] = title;
+		feature["lat"] = lat;
+		feature["lon"] = lon;
+		mapper_inject_feature(feature);
+	}
+
+	// sweep the ones that are not part of this display
+	mapper_hide_stale();
+
+	mapper_page_update_already_busy = 0;
+
 }
-mapper_start();
+
+//
+// Ask the server for a fresh set of map markers
+//
+function mapper_page_paint_request(recenter) {
+
+	var q = document.getElementById("q");
+	if(map == null) return;
+	var center = map.getCenter();
+	var lat = 0;
+	var lng = 0;
+	if(center != null) {
+		lat = center.lat();
+		lng = center.lng();
+	}
+
+	var url = "/json?q="+q+"&lat="+lat+"&lng="+lng;
+	map_div.style.border = "1px solid yellow";
+
+	new Ajax.Request(url, {
+		method:'get',
+		requestHeaders: {Accept: 'application/json'},
+		onSuccess: function(transport) {
+			map_div.style.border = "1px solid green";
+			var blob = transport.responseText.evalJSON();
+			if( blob ) {
+				mapper_page_paint(blob);
+				if( recenter == true ) {
+					mapper_center();
+				}
+			}
+		}
+	});
+
+}
+
+/******************************************************************************************************************************************/
+// initialization - start up and add any statically defined markers - (we keep markers in javascript as an array to be processed by client)
+/******************************************************************************************************************************************/
+
+
+/// start mapping engine (invoked once only)
+function mapper_initialize() {
+  if(map_div) return;
+  map_div = document.getElementById("map");
+  if(!map_div) return;
+  if (!GBrowserIsCompatible()) return;
+  if(map) return;
+  map = new GMap2(document.getElementById("map"));
+  // map = new google.maps.Map2(document.getElementById("map"));
+  var mapControl = new GMapTypeControl();
+  map.addControl(mapControl);
+  map.addControl(new GSmallMapControl());
+  // setup custom icon support
+  mapper_icons();
+  // map.removeMapType(G_HYBRID_MAP);
+  // capture map location whenever the map is moved and go ahead and ask for a view of that areas markers from our own server
+  if(map_location_callback) {
+    GEvent.addListener(map, "moveend", function() {
+      mapper_save_location();
+	  // when the map is moved go ahead and fetch new markers [ but do not center on them ]
+	  mapper_page_paint_request(false);
+    });
+	// also capture map location once at least
+	mapper_save_location();
+  }
+  // add features from a statically cached list if any [ this can help make first page display a bit faster ]
+  mapper_inject(map_markers_raw);
+  // center on any data we have already if any [ slight tension here with dynamic updates so can be disabled ]
+  if(#{@map_cover_all_points}) {
+    mapper_center();
+  }
+  // ask to add features from a remote connection dynamically [ and will center on them ]
+  mapper_page_paint_request(true);
+  // call a user callback as a last step
+  if(self['#{@map_usercallback}'] && typeof #{@map_usercallback} == 'function') {
+    #{@map_usercallback}();
+  }
+}
+
+// google.setOnLoadCallback(mapper_initialize);
+// google.load("maps", "2.x");
+mapper_initialize();
+
 </script>
 ENDING
 

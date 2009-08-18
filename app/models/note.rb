@@ -33,23 +33,24 @@ class Note < ActiveRecord::Base
   acts_as_tsearch :fields => ["title","description"]
 
   RELATIONS = %w{
-					TAG
-					CATEGORY
-					ENTITY
-					RELATION
+					RELATION_TAG
+					RELATION_CATEGORY
+					RELATION_ENTITY
+					RELATION_RELATION
+					RELATION_FRIEND
 				}
 
    KINDS = %w{
-					USER
-					POST
-					FEED
-					REPORTER
-					REPORT
-					GROUP
-					EVENT
-					PLACE
-					MAP
-					FILTER
+					KIND_USER
+					KIND_POST
+					KIND_FEED
+					KIND_REPORTER
+					KIND_REPORT
+					KIND_GROUP
+					KIND_EVENT
+					KIND_PLACE
+					KIND_MAP
+					KIND_FILTER
 				}
 
   STATEBITS_RESERVED = 0

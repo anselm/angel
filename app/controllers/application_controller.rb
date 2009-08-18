@@ -11,7 +11,7 @@ class ApplicationController < ActionController::Base
   before_filter :map_start
   
   def map_start
-    @map = Dynamapper.new(:apikey => SETTINGS[:googlemaps], :height => "200px" )
+    @map = Dynamapper.new(:apikey => SETTINGS[:googlemaps], :height => "340px" )
     @map.center(37.44,-122.16,9);
   end
 

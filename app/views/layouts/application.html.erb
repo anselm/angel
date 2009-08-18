@@ -10,6 +10,6 @@
 <body>
 <%= render :partial => "layouts/header" %>
 <%= yield  %>
-</body>
+<body onunload="GUnload()">
 <%= @map.tail() %>
 </html>

@@ -57,10 +57,10 @@ class TwitterSupport
 				# in this strategy we look at the core members only and get their friends recent timelines.
 			end
 		else
-
-		# if there are no people to anchor the search then just let twitter do the search
-		ActionController::Base.logger.info "query: using a general search strategy looking for #{q[:words].join(' ')} near #{lat} #{lon} #{rad}"
-		self.twitter_search(q[:words],lat,lon,rad)
+			# if there are no people to anchor the search then just let twitter do the search
+			ActionController::Base.logger.info "query: using a general search strategy looking for #{q[:words].join(' ')} near #{lat} #{lon} #{rad}"
+			self.twitter_search(q[:words],lat,lon,rad) if q[:words] && q[:words].length > 0
+		end
 
 		# TODO idea
 		# after an ordinary twitter search i would like to take the persons that were related to these posts and get them in more detail

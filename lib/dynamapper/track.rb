@@ -1,4 +1,4 @@
-class Track
+class Dynamapper
 
   # this is a test idea; i think it would be nice to have real time ongoing tracking of participants if they want
   # so here we let them submit their information to an ordinary database for use later

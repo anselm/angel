@@ -1,0 +1,170 @@
+<%= @map.body() %>
+
+<%
+
+	#########################################################################################################
+	# add the raw posts to the map
+	#########################################################################################################
+	
+	# here are the raw posts as a product of the query
+	# this could include posts that were associated with persons that were being examined
+	# this could include posts that are simply in the geographic region in question if any
+	# TODO it would be nice to indicate centrality and score; as a product of a specific search or highest recent velocity
+	# TODO it would be nice to be able to draw animated colored regions of different sizes and styles based on participants
+	# TODO limits?
+
+	@map.feature({
+		:kind => :icon,
+		:image => "/dynamapper/icons/weather-clear.png",
+		:iconSize => [ 32, 32 ],
+		# shadow
+		# shadowSize
+		:iconAnchor => [ 9, 34 ],
+		:iconWindowAnchor => [ 9,2 ],
+		})
+
+	results = @query[:results]
+	if results
+		results.each do |item|
+			next if !item.lat && !item.lon
+			noisex = ((rand(1000)-500)/20000.0) 
+			noisey = ((rand(1000)-500)/10000.0)
+			ActionController::Base.logger.info "mapping feature #{item.title} at #{item.lat} and #{item.lon}"
+			@map.feature({
+				:kind => :marker,
+				:title => "#{item.title} #{item.description}",
+				:lat => "#{item.lat+noisex}",
+				:lon => "#{item.lon+noisey}"
+			})
+		end
+	end
+
+	#########################################################################################################
+	# add the direct parties
+	#########################################################################################################
+
+	# here are the persons who were related to the query
+	# this can be the specific parties that were part of the query
+	# this can also include their friends
+	# i'd like to draw lines that indicate friendships in that network
+	# i may have to cap results
+	# TODO it would be nice here as well to indicate centrality
+	# TODO it would be nice to be able to draw animated colored regions of different sizes and styles based on participants
+	# TODO limits?
+
+	@map.feature({
+		:kind => :icon,
+		:image => "/dynamapper/icons/emblem-favorite.png",
+		:iconSize => [ 32, 32 ],
+		# shadow
+		# shadowSize
+		:iconAnchor => [ 9, 34 ],
+		:iconWindowAnchor => [ 9,2 ],
+		})
+
+	results = @query[:parties]
+	if results
+		results.each do |item|
+			puts "considering party #{item.title} at #{item.lat} and #{item.lon}"
+			next if !item.lat && !item.lon
+			noisex = ((rand(1000)-500)/20000.0) 
+			noisey = ((rand(1000)-500)/10000.0)
+			ActionController::Base.logger.info "mapping feature #{item.title} at #{item.lat} and #{item.lon}"
+			@map.feature({
+				:kind => :marker,
+				:title => "#{item.title}",
+				:lat => "#{item.lat+noisex}",
+				:lon => "#{item.lon+noisey}"
+			})
+		end
+	end
+
+	#########################################################################################################
+	# add the second order parties to the map
+	#########################################################################################################
+
+	# here are the persons who were related to the query
+	# this can be the specific parties that were part of the query
+	# this can also include their friends
+	# i'd like to draw lines that indicate friendships in that network
+	# i may have to cap results
+	# TODO it would be nice here as well to indicate centrality
+	# TODO it would be nice to be able to draw animated colored regions of different sizes and styles based on participants
+	# TODO limits?
+
+	@map.feature({
+		:kind => :icon,
+		:image => "/dynamapper/icons/face-devil-grin.png",
+		:iconSize => [ 32, 32 ],
+		# shadow
+		# shadowSize
+		:iconAnchor => [ 9, 34 ],
+		:iconWindowAnchor => [ 9,2 ],
+		})
+
+	results = @query[:friends]
+	if results
+		results[0..100].each do |item|
+			puts "considering party #{item.title} at #{item.lat} and #{item.lon}"
+			next if !item.lat && !item.lon
+			noisex = ((rand(1000)-500)/20000.0) 
+			noisey = ((rand(1000)-500)/10000.0)
+			ActionController::Base.logger.info "mapping feature #{item.title} at #{item.lat} and #{item.lon}"
+			@map.feature({
+				:kind => :marker,
+				:title => "#{item.title}",
+				:lat => "#{item.lat+noisex}",
+				:lon => "#{item.lon+noisey}"
+			})
+		end
+	end
+
+	#########################################################################################################
+	# draw lines between parties
+	#########################################################################################################
+
+	# TODO the lines between the persons and the posts
+	# TODO the persons contrails
+	# TODO we really do want to do a better job of real relations
+	# TODO projection style use curved lines?
+
+	if @query[:parties]
+		@query[:parties].each do |party|
+			next if !party.lat && !party.lon
+			@query[:friends].each do |friend|
+				next if !friend.lat && !friend.lon
+				noisex = ((rand(1000)-500)/20000.0) 
+				noisey = ((rand(1000)-500)/10000.0)
+				@map.feature({
+					:kind => :line,
+					:lat => "#{party.lat+noisex}",
+					:lon => "#{party.lon+noisey}",
+					:lat2 => "#{friend.lat+noisex}",
+					:lon2 => "#{friend.lon+noisey}",
+					:color => "yellow",
+					:width => "1",
+					:opacity => "0.5",
+				})
+			end
+		end
+	end
+
+%>
+
+<h1>Search results for <% @query[:lat] %> <% @query[:lon] %> and phrase <% @query[:phrase] %> </h1>
+<h1>Posts found here</h1>
+<ul>
+<% if @query[:results] %>
+<%  @query[:results].each do |item| %>
+<li><a href="/notes/<%=item.id%>"><%= item.title %></a> at <%= item.lat %>, <%=item.lon %> </li>
+<% end %>
+<% end %>
+</ul>
+<h1>Parties found here</h1>
+<ul>
+<% if @query[:parties] %>
+<%   @query[:parties].each do |item| %>
+<li><%= item.title %> at <%= item.lat %>, <%=item.lon %> </li>
+<% end %>
+<% end %>
+</ul>
