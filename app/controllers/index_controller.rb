@@ -3,20 +3,22 @@ require 'lib/query_support.rb'
 require 'json/pure'
 
 class IndexController < ApplicationController
-
+	
   #
-  # The client side is javascript so just deliver code to the client first and javascript will take over
+  # The client side is javascript so just deliver code to the client first
+  # and javascript will take over
   #
   def index
   end
 
   #
-  # Our first pass at an API - handle place, person and subject queries and return json
+  # Our first pass at an API - handle place, person and subject queries
+  # and return json
   #
   def json
     question = params[:q]
     synchronous = false
-    synchronous = true if params[:synchronous] && params[:synchronous] == true
+    synchronous = true if params[:synchronous] && params[:synchronous] ==true
     results = QuerySupport::query(question,synchronous)
     render :json => results.to_json
   end

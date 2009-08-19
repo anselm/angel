@@ -38,6 +38,7 @@ class Note < ActiveRecord::Base
 					RELATION_ENTITY
 					RELATION_RELATION
 					RELATION_FRIEND
+					RELATION_URL
 				}
 
    KINDS = %w{
