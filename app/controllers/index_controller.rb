@@ -1,18 +1,16 @@
 
 require 'lib/dynamapper/geolocate.rb'
 require 'lib/twitter_support/twitter_aggregate.rb'
+require 'json/pure'
 
 class IndexController < ApplicationController
 
-  #
-  # this application is driven by json so the main page just ships javascript to the client
-  #
   def index
   end
 
   def json
     @query = self.query(params)
-	render :json => @query.to_json
+    render :json => @query.to_json
   end
 
   def about

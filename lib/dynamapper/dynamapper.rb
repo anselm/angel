@@ -545,7 +545,6 @@ function mapper_page_paint_request(recenter) {
 
 	var url = "/json?q="+q+"&lat="+lat+"&lng="+lng;
 	map_div.style.border = "1px solid yellow";
-
 	new Ajax.Request(url, {
 		method:'get',
 		requestHeaders: {Accept: 'application/json'},
