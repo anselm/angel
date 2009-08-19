@@ -1,13 +1,18 @@
-<div style="float:right;display:none;">
+<div style="float:right;">
+<!--
 <form name="searchform" style="display:inline; padding:0; margin:0;">
 <input type="text" name="q" id="q" value="<%=params[:q]%>" size="60" />
 <input type="hidden" name="latitude" id="latitude" value="0" />
 <input type="hidden" name="longitude" id="longitude" value="0" />
 <input type="submit" value="search" />
 </form>
+-->
+<!--
 <%= link_to "Home", "/" %> |
-<%= link_to "About", "/about" %> |
 <%= link_to "New", "/notes/new" %> |
+-->
+<%= link_to "About", "/about" %> |
+<!--
 <% if !current_user %>
   <%= link_to "Register", new_account_path %> |
   <%= link_to "Log In", new_user_session_path %> 
@@ -18,6 +23,7 @@
   <%= link_to "My Account", account_path %> |
   <%= link_to "Logout", user_session_path, :method => :delete %>
 <% end %>
+-->
 </div>
 <div style="clear:both"></div>
 <p style="color: green"><%= flash[:notice] %></p>

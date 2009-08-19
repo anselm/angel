@@ -1,4 +1,4 @@
-<%=
+<%
 
 # TODO use a form builder; such as from previous projects; for now this will conflate viewing and editing.
 
@@ -25,40 +25,43 @@ end
 %>
 
 <h2>Main Properties</h2>
-	<label class='inputdialog'>&nbsp;</label>			<%= form_submit_field form,:Save %><br/>
-	<label class='inputdialog'>Title</label>			<%= form_text_field form,:title %><br/>
-	<label class='inputdialog'>Link</label>				<%= form_text_field form,:link %><br/>
-    <label class='inputdialog'>Description</label>		<%= form_text_field form,:description %><br/>
-    <label class='inputdialog'>Tags</label>				<%= form_text_field form,:tagstring %><br/>
-    <label class='inputdialog'>Location</label>			<%= form_text_field form,:location %><br/>
-    <label class='inputdialog'>Latitude</label>			<%= form_text_field form,:lat %><br/>
-    <label class='inputdialog'>Longitude</label>		<%= form_text_field form,:lon %><br/>
-    <label class='inputdialog'>Radius </label>			<%= form_text_field form,:rad %><br/>
-    <label class='inputdialog'>Begins</label>			<%= form_text_field form,:begins %><br/>
-    <label class='inputdialog'>Ends</label>				<%= form_text_field form,:ends %><br/>
-    <label class='inputdialog'>Photo</label>			<%= form_file_field form,:photo %><br/>
-	<label class='inputdialog'>&nbsp;</label>
 
-	<% if @note.photo.exists? then %>
-		<%= image_tag @note.photo.url(:small) %><br/>
-	<% else %>
-		<img src="/images/default.jpg" width="50" height="50" style="border: 4px ridge grey" /><br/>
-	<% end %>
-	<br>
+<label class='inputdialog'>&nbsp;</label>	<%= form_submit_field form,:Save %><br/>
+<label class='inputdialog'>Title</label>	<%= form_text_field form,:title %><br/>
+<label class='inputdialog'>Link</label>		<%= form_text_field form,:link %><br/>
+<label class='inputdialog'>Description</label>  <%= form_text_field form,:description %><br/>
+<label class='inputdialog'>Tags</label>		<%= form_text_field form,:tagstring %><br/>
+<label class='inputdialog'>Location</label>	<%= form_text_field form,:location %><br/>
+<label class='inputdialog'>Latitude</label>	<%= form_text_field form,:lat %><br/>
+<label class='inputdialog'>Longitude</label>    <%= form_text_field form,:lon %><br/>
+<label class='inputdialog'>Radius </label>	<%= form_text_field form,:rad %><br/>
+<label class='inputdialog'>Begins</label>	<%= form_text_field form,:begins %><br/>
+<label class='inputdialog'>Ends</label>		<%= form_text_field form,:ends %><br/>
+<label class='inputdialog'>Photo</label>	<%= form_file_field form,:photo %><br/>
+<label class='inputdialog'>&nbsp;</label>
+
+<% if @note.photo.exists? then %>
+<%= image_tag @note.photo.url(:small) %><br/>
+<% else %>
+<img src="/images/default.jpg" width="50" height="50" style="border: 4px ridge grey" /><br/>
+<% end %>
+<br>
 
 <h2>Admin</h2>
-    <label class='inputdialog'>kind </label>			<%= form_menu_field form,:kind,Note::KINDS %><br/>
-    <label class='inputdialog'>uuid </label>			<%= form_text_field form,:uuid %><br/>
-	<label class='inputdialog'>provenance </label>		<%= form_text_field form,:provenance %><br/>
-    <label class='inputdialog'>statebits </label>		<%= form_text_field form,:statebits %><br/>
-    <label class='inputdialog'>score </label>			<%= form_text_field form,:score %><br/>
-    <label class='inputdialog'>owner_id </label>		<%= form_text_field form,:owner_id %><br/>
-	<label class='inputdialog'>&nbsp;</label>			<%= form_submit_field form,:Save %>
-<!-- tree depth set automatically   <label class='inputdialog'>depth </label>			<%= form_text_field form,:depth %><br/> -->
+<label class='inputdialog'>kind </label>	<%= form_menu_field form,:kind,Note::KINDS %><br/>
+<label class='inputdialog'>uuid </label>	<%= form_text_field form,:uuid %><br/>
+<label class='inputdialog'>provenance </label>	<%= form_text_field form,:provenance %><br/>
+<label class='inputdialog'>statebits </label>	<%= form_text_field form,:statebits %><br/>
+<label class='inputdialog'>score </label>	<%= form_text_field form,:score %><br/>
+<label class='inputdialog'>owner_id </label>	<%= form_text_field form,:owner_id %><br/>
+<label class='inputdialog'>&nbsp;</label>	<%= form_submit_field form,:Save %>
+<!-- tree depth set automatically
+<label class='inputdialog'>depth </label>	<%= form_text_field form,:depth %><br/>
+ -->
 
 <h2>Permissions</h2>
 
-<label class='inputdialog'>permissions </label>		<%= form_text_field form,:permissions %><br/>
+<label class='inputdialog'>permissions </label>	<%= form_text_field form,:permissions %><br/>
 
 Rules
 <ul>
@@ -103,7 +106,7 @@ Rules
 <li>Allow removing of attributes [ if marked as such ]
 </ul> 
 
-<javascript>
+<script>
 
 function draw_relation(flags,kind,value,sibling) {
 
@@ -147,14 +150,14 @@ function draw_relations() {
 
 }
 
-</javascript>
+</script>
 
 <%
 
 #    query = { :note_id => @note.id }
 #    relations = Relation.find(:all,:conditions=>query)
 #	relations.each do |r|
-#		%><%= select("note","kind",Note::KINDS,{:include_blank => 'None'})
+#	 select("note","kind",Note::KINDS,{:include_blank => 'None'})
 #	end
 
 %>
