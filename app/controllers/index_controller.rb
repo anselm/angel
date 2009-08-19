@@ -5,15 +5,9 @@ require 'lib/twitter_support/twitter_aggregate.rb'
 class IndexController < ApplicationController
 
   #
-  # print a view or search results view in desired format
+  # this application is driven by json so the main page just ships javascript to the client
   #
   def index
-    @query = self.query(params)
-    respond_to do |format|
-      format.html # show.html.erb
-      format.json  { render :json => @query.to_json }
-	  format.xml { render :xml => @query }
-    end
   end
 
   def json
