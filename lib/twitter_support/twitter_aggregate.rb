@@ -18,6 +18,9 @@ require 'lib/twitter_support/twitter_reap.rb'
 
 class TwitterSupport
 
+	#
+	# TODO migrate the controller query parse logic down here
+	#
 	def self.aggregate(q)
 
 		# reap old data TODO
@@ -52,7 +55,7 @@ class TwitterSupport
 				ActionController::Base.logger.info "query: using a yql search for parties"
 				self.yql_twitter_get_timelines(q[:parties])
 				# self.yql_twitter_get_timelines(q[:friends])
-				# self.yql_twitter_get_timelines(q[:acquiantances])
+				# self.yql_twitter_get_timelines(q[:acquaintances])
 			when "recent"
 				# in this strategy we look at the core members only and get their friends recent timelines.
 			end
@@ -76,9 +79,11 @@ class TwitterSupport
 		return q
 	end
 
-	def self.aggregate_memoize(q)
-		# save it! TODO
-		self.aggregate(q)
+	def self.aggregate_memoize(q,synchronous=false)
+		# in some cases we want to cache user queries TODO
+		if(synchronous == true)
+			self.aggregate(q)
+		end
 	end
 
 	def self.aggregate_all

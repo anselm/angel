@@ -85,11 +85,12 @@ class TwitterSupport
 
 	def self.get_last_post(party,provenance)
 		last = Note.find(:last, :order => 'created_at',
-								:conditions => {	:kind => Note::KIND_POST,
-													:owner_id => party.id,
-													:provenance => provenance
-												}
-							)
+					:conditions => {
+						:kind => Note::KIND_POST,
+						:owner_id => party.id,
+						:provenance => provenance
+						}
+				)
 		ActionController::Base.logger.info "the last posted post of this party #{party.title} is #{last.uuid}" if last
 		return last.uuid if last
 		return 0
