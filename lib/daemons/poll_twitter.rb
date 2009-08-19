@@ -13,6 +13,7 @@ require 'open-uri'
 require 'twitter_support/twitter_base.rb'
 require 'twitter_support/twitter_collect.rb'
 require 'twitter_support/twitter_aggregate.rb'
+require 'query_support.rb'
 
 platform = YAML.load(open(File.dirname(__FILE__) + "/../../config/platform.yml"))
 
@@ -22,32 +23,23 @@ Signal.trap("TERM") do
 end
 
 while($running) do
-  q = {}
-  q[:partynames] = "anselm" # test for now
-  q[:parties] = TwitterSupport::twitter_get_parties(q[:partynames])
-  q[:friends] = TwitterSupport::twitter_get_friends(q[:parties])
-  sleep 10
 
-  # i think the aggregator has to work with memoized queries
-  # and i'll need some way to curate what those root anchors are
-  # for now i'll just use a static list of users
-  # later i would like to support general spatial and subject matter queries
+  #
+  # TODO; have a number of memoized queries that can be edited from an admin panel
+  # for now lets just start with querying off of one root as a test
+  #
+  question = "@meedan"
+  synchronous = true
 
-  # 
-
+  #
+  # go ahead and fetch any new content related to query string 
+  #
+  QuerySupport::query(question,synchronous)
  
-  # i think i need a static list of users for now - rooted on say me and the like
-  # periodically collect those users and their friends
-  # collect those users feeds periodically
-  # walk all users
-  #   fetch their friends
-
-  # the above is good as a test however
-  #   - i should walk the users or other anchors
-  #   - i should update them if i need to
-  #   - this should be done as a collection of say 10 at a time ideally
-  #   - i should at least use yql
-  #   - i should have an interactive diagnostic that shows the same
+  #
+  # sleep for 60 minutes
+  # 
+  sleep 3600
 
 end
 

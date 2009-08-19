@@ -54,7 +54,7 @@ class TwitterSupport
 				# we could also query on search terms if any and or apply a default search filter? like "help" and "i need"?
 				ActionController::Base.logger.info "query: using a yql search for parties"
 				self.yql_twitter_get_timelines(q[:parties])
-				# self.yql_twitter_get_timelines(q[:friends])
+				self.yql_twitter_get_timelines(q[:friends])
 				# self.yql_twitter_get_timelines(q[:acquaintances])
 			when "recent"
 				# in this strategy we look at the core members only and get their friends recent timelines.

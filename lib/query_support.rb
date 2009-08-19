@@ -74,13 +74,12 @@ class QuerySupport
 		lat,lon,rad = Dynamapper.geolocate(q[:placenames].join(' ')) if q[:placenames].length
 		rad = 5 # TODO hack remove
 		q[:lat],q[:lon],q[:rad] = lat,lon,rad
-		ActionController::Base.logger.info "query: geolocated the query #{q[:placenames].join(' ')} to #{lat} #{lon} #{rad}"
-
+		ActionController::Base.logger.info "query: located the query #{q[:placenames].join(' ')} to #{lat} #{lon} #{rad}"
 		return q
 
 	end
 
-	def self.query(phrase,synchronous=true)
+	def self.query(phrase,synchronous=false)
 
 		# basic string parsing
 		q = QuerySupport::query_parse(phrase)
@@ -112,7 +111,11 @@ class QuerySupport
 
  results_length = 0
  results = []
- Note.all().each do |note|
+ Note.all(:conditions => [ "kind = ?", Note::KIND_POST ], :limit => 50, :order => "id desc" ).each do |note|
+   results << note
+   results_length = results_length + 1
+ end
+ Note.all(:conditions => [ "kind = ?", Note::KIND_USER ], :limit => 50, :order => "id desc" ).each do |note|
    results << note
    results_length = results_length + 1
  end

@@ -211,6 +211,7 @@ var map_longitude = 0;
 var map_latitude = 0;
 var mgr = null;
 var map_icons = [];
+var map_icon_names = {};
 var map_markers = [];
 var map_marker;
 var lat = 28.000;
@@ -263,12 +264,12 @@ function mapper_enable_dragging() {
 }
 /// mapper icon support
 function mapper_icons() {
-	base_icon = new GIcon(G_DEFAULT_ICON);
-	base_icon.shadow = "http://www.google.com/mapfiles/shadow50.png";
-	base_icon.iconSize = new GSize(20, 34);
-	base_icon.shadowSize = new GSize(37, 34);
-	base_icon.iconAnchor = new GPoint(9, 34);
-	//base_icon.infoWindowAnchor = new GPoint(9, 2);
+  base_icon = new GIcon(G_DEFAULT_ICON);
+  base_icon.shadow = "http://www.google.com/mapfiles/shadow50.png";
+  base_icon.iconSize = new GSize(20, 34);
+  base_icon.shadowSize = new GSize(37, 34);
+  base_icon.iconAnchor = new GPoint(9, 34);
+  //base_icon.infoWindowAnchor = new GPoint(9, 2);
 }
 /// add a map centering marker - unused
 function mapper_center_marker() {	  
@@ -288,10 +289,13 @@ function mapper_center() {
   map.setCenter( bounds.getCenter( ), thezoom );
 }
 /// add a marker [ must be a separate function for closure ]
-function mapper_create_marker(point,title) {
+function mapper_create_marker(point,title,glyph) {
   var number = map_markers.length
   var marker_options = { title:title }
-  if ( map_icons.length > 0 ) {
+  if ( glyph != null ) {
+	marker_options["icon"] = glyph;
+  }
+  else if ( map_icons.length > 0 ) {
 	marker_options["icon"] = map_icons[map_icons.length-1];
   }
   var marker = new GMarker(point, marker_options );
@@ -304,7 +308,8 @@ function mapper_create_marker(point,title) {
   map.addOverlay(marker);
   return marker;
 }
-/// saving the map location to a hidden input form if found [ very convenient for say telling server about location of a search form submission ]
+/// saving the map location to a hidden input form if found
+/// [ very convenient for say telling server about location of a search form submission ]
 function mapper_save_location(center) {
   if(map == null ) return;
   var center = map.getCenter();
@@ -336,9 +341,10 @@ function mapper_get_location() {
 // duplicate tracking
 /******************************************************************************************************************************************/
 
-// a list tracking all features active on the screen so that we can not re-create ones that already exist
 var mapper_features = {};
-// do we already have this feature on the screen? caller has to construct and supply a unique key signature identifying this object
+
+/// a list tracking all features active on the screen so that we can not re-create ones that already exist
+/// do we have this feature on the screen? caller has to construct and supply a unique key signature identifying this object
 function mapper_feature_exists_test_and_mark(key) {
 	var feature = mapper_features[key];
 	if(feature != null) {
@@ -347,7 +353,7 @@ function mapper_feature_exists_test_and_mark(key) {
 	}
 	return false;
 }
-// visit all features and mark them as stale; this is done prior to adding more data to a view as an efficiency measure
+/// visit all features and mark them as stale; this is done prior to adding more data to a view as an efficiency measure
 function mapper_mark_all_stale() {
 	for(var key in mapper_features) {
 		var feature = mapper_features[key];
@@ -356,12 +362,13 @@ function mapper_mark_all_stale() {
 		}
 	}
 }
-// mark this feature as not stale
+/// mark this feature as not stale
 function mapper_track_and_mark_not_stale(pointer,key) {
 	pointer.stale = false;
 	mapper_features[key] = pointer;
 }
-// hide all stale features ; arguably to save memory we could actually remove these features but unsure if javascript conserves memory like so anyway
+/// hide all stale features 
+/// arguably to save memory we could actually remove these features but unsure if javascript conserves memory like so anyway
 function mapper_hide_stale() {
 	for(var key in mapper_features) {
 		var feature = mapper_features[key];
@@ -370,12 +377,11 @@ function mapper_hide_stale() {
 		}
 	}
 }
-
+/// build a key to more or less uniquely identify a feature
 function mapper_make_key(feature) {
 	var key = feature["lat"] + ":" + feature["lon"] + ":" + feature["title"];
 	return key;
 }
-
 
 /******************************************************************************************************************************************/
 // do actual meat of binding our fairly generic system to google maps - add a feature to google maps
@@ -383,16 +389,15 @@ function mapper_make_key(feature) {
 
 /// javascript: try to get feature up
 function mapper_inject_feature(feature) {
-
   if(feature) {
-	/*
-	if(feature.kind == "icon_numbered") {
-		var icon = new GIcon(base_icon);
-		var letter = String.fromCharCode("A".charCodeAt(0) + icon_index);
-		icon.image = "http://www.google.com/mapfiles/marker" + letter + ".png";
-		map_icons.push(icon);
-	  } else
-	*/
+    /*
+    if(feature.kind == "icon_numbered") {
+      var icon = new GIcon(base_icon);
+      var letter = String.fromCharCode("A".charCodeAt(0) + icon_index);
+      icon.image = "http://www.google.com/mapfiles/marker" + letter + ".png";
+      map_icons.push(icon);
+    } else
+    */
     if(feature.kind == "icon") {
       var icon = new GIcon();
       icon.image = feature["image"];
@@ -400,22 +405,25 @@ function mapper_inject_feature(feature) {
       icon.iconAnchor = new GPoint(feature["iconAnchor"][0],feature["iconAnchor"][1]);
       //icon.infoWindowAnchor = new GPoint(feature["infoWindowAnchor"][0],feature["infoWindowAnchor"][1]);
       map_icons.push(icon);
+      map_icon_names[icon.image] = icon;
     }
     else if( feature.kind == "marker" ) {
       var key = mapper_make_key(feature);
-	  if(mapper_feature_exists_test_and_mark(key)) {
-		return;
-	  }
-
+      if(mapper_feature_exists_test_and_mark(key)) {
+        return;
+      }
       // Slightly randomize the map position of marker so markers do not always overlap
       var randx = Math.random()*0.01 - 0.005;
       var randy = Math.random()*0.01 - 0.005;
-
       var ll = new GLatLng(feature["lat"] + randy ,feature["lon"] + randx);
       var title = feature["title"];
-      var marker = mapper_create_marker(ll,title);
+      var glyph = feature["glyph"];
+      if(glyph != null) {
+        glyph = map_icon_names[glyph];
+      }
+      var marker = mapper_create_marker(ll,title,glyph);
       if(feature["style"] == "show") { GEvent.trigger(marker,"click"); }
-	  mapper_track_and_mark_not_stale(marker,key);
+      mapper_track_and_mark_not_stale(marker,key);
     }
     else if( feature.kind == "line") {
       var p1 = new GLatLng(feature["lat"],feature["lon"]);
@@ -469,9 +477,19 @@ function mapper_page_paint(blob) {
 	var words = blob['words'];
 
 	// Set iconography
+        var glyph_post = "/dynamapper/icons/weather-clear.png";
 	var feature = {};
 	feature["kind"] = "icon";
-	feature["image"] = "/dynamapper/icons/weather-clear.png";
+	feature["image"] = glyph_post;
+	feature["iconSize"] = [ 32, 32 ];
+	feature["iconAnchor"] = [ 9, 34 ];
+	feature["iconWindowAnchor"] = [ 9, 2 ];
+	mapper_inject_feature(feature);
+
+        var glyph_person = "/dynamapper/icons/emblem-favorite.png";
+	var feature = {};
+	feature["kind"] = "icon";
+	feature["image"] = glyph_person;
 	feature["iconSize"] = [ 32, 32 ];
 	feature["iconAnchor"] = [ 9, 34 ];
 	feature["iconWindowAnchor"] = [ 9, 2 ];
@@ -518,6 +536,8 @@ function mapper_page_paint(blob) {
 		feature["title"] = title;
 		feature["lat"] = lat;
 		feature["lon"] = lon;
+                feature["glyph"] = glyph_post;
+                if( kind != "KIND_POST" ) feature["glyph"] = glyph_person;
 		mapper_inject_feature(feature);
 	}
 
