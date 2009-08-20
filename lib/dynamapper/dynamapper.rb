@@ -183,6 +183,7 @@ ENDING
   def body()
 <<ENDING
 <div id="map" style="width:#{@width};height:#{@height};"></div>
+<div id="map_list"></div>
 ENDING
   end
 
@@ -481,7 +482,7 @@ function mapper_page_paint(blob) {
 	var words = blob['words'];
 
 	// Set iconography
-        var glyph_post = "/dynamapper/icons/weather-clear.png";
+	var glyph_post = "/dynamapper/icons/weather-clear.png";
 	var feature = {};
 	feature["kind"] = "icon";
 	feature["image"] = glyph_post;
@@ -490,7 +491,7 @@ function mapper_page_paint(blob) {
 	feature["iconWindowAnchor"] = [ 9, 2 ];
 	mapper_inject_feature(feature);
 
-        var glyph_person = "/dynamapper/icons/emblem-favorite.png";
+	var glyph_person = "/dynamapper/icons/emblem-favorite.png";
 	var feature = {};
 	feature["kind"] = "icon";
 	feature["image"] = glyph_person;
@@ -498,6 +499,9 @@ function mapper_page_paint(blob) {
 	feature["iconAnchor"] = [ 9, 34 ];
 	feature["iconWindowAnchor"] = [ 9, 2 ];
 	mapper_inject_feature(feature);
+
+	// a list to draw text to
+	var map_list = document.getElementById("map_list");
 
 	// mark all objects as stale
 	mapper_mark_all_stale();
@@ -530,19 +534,28 @@ function mapper_page_paint(blob) {
 		var begins = item['begins'];
 		var ends = item['ends'];
 
-		// TODO - i should publish all related parties
-		// TODO - i should publish all the depictions
-		// TODO - also publish all the relationships
-
 		// Build map feature
+		// TODO - i should publish all related parties by drawing lines
+		// TODO - i should publish all the depictions from twitter as icons
 		var feature = {};
 		feature["kind"] = "marker";
 		feature["title"] = title;
 		feature["lat"] = lat;
 		feature["lon"] = lon;
-                feature["glyph"] = glyph_post;
-                if( kind != "KIND_POST" ) feature["glyph"] = glyph_person;
+		feature["glyph"] = glyph_post;
+		if( kind != "KIND_POST" ) feature["glyph"] = glyph_person;
 		mapper_inject_feature(feature);
+
+		// Draw a list of features as well
+		if(map_list) {
+			var div = document.createElement('div');
+			if(div) {
+				div.innerHTML = "<img src='"+feature["glyph"]+"'></img> "+title;
+				div.style.border = "1px solid green";
+				map_list.appendChild(div);
+			}
+		}
+
 	}
 
 	// sweep the ones that are not part of this display
@@ -622,13 +635,13 @@ function mapper_initialize() {
   mapper_icons();
   // map.removeMapType(G_HYBRID_MAP);
   // try to respect supplied map boundaries for the very first refresh before user does any actions
-  var did_not_center_yet = true;
   map.south = #{@south};
   map.west = #{@west};
   map.north = #{@north};
   map.east = #{@east};
+  var map_please_recenter = true;
   if(map.north < 0.0 || map.north > 0.0 || map.south < 0.0 || map.south > 0.0) {
-    did_not_center_yet = false;
+    map_please_recenter = false;
     var bounds = new GLatLngBounds( new GLatLng(map.south,map.west,false), new GLatLng(map.north,map.east,false) );
 	var center = bounds.getCenter();
 	var zoom = map.getBoundsZoomLevel(bounds);
@@ -648,13 +661,13 @@ function mapper_initialize() {
   // add features from a statically cached list if any [ this can help make first page display a bit faster ]
   mapper_inject(map_markers_raw);
   // center on any data we have already if any [ slight tension here with dynamic updates so can be disabled ]
-  if( did_not_center_yet ) {
+  if( map_please_recenter ) {
 	if(#{@map_cover_all_points}) {
 		mapper_center();
 	}
   }
   // ask to add features from a remote connection dynamically [ and will center on them ]
-  mapper_page_paint_request(true);
+  mapper_page_paint_request(map_please_recenter);
   // call a user callback as a last step
   if(self['#{@map_usercallback}'] && typeof #{@map_usercallback} == 'function') {
     #{@map_usercallback}();
