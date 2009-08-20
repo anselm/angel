@@ -34,7 +34,7 @@ while($running) do
   #
   # go ahead and fetch any new content related to query string 
   #
-  QuerySupport::query(question,synchronous)
+  QuerySupport::query(question,0,0,0,synchronous)
  
   #
   # sleep for 60 minutes

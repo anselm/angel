@@ -11,9 +11,9 @@ class TwitterSupport
 	# TODO slightly worried that a bad rad might be passed in
 	##########################################################################################################
 
-	def self.twitter_search(terms,lat,lon,rad)
+	def self.twitter_search(terms,map_s,map_w,map_n,map_e)
 
-		ActionController::Base.logger.info "Searching for #{terms.join(' ')} near #{lat} #{lon} #{rad}"
+		ActionController::Base.logger.info "Searching for #{terms.join(' ')} near #{map_s} #{map_w} #{map_n} #{map_e}"
 
 		if self.twitter_get_remaining_hits < 1
 			# TODO what should we do?
@@ -26,16 +26,26 @@ class TwitterSupport
 		posts = []
 		parties = []
 		blob = []
-		if lat < 0 || lat > 0 || lon < 0 || lon > 0
-			rad = "25mi"
-			blob = Twitter::Search.new(terms.join(' ')).geocode(lat,lon,rad)  # TODO try conflating this verbosity
-			ActionController::Base.logger.debug("twitter_search with #{terms} and lat lon #{lat} #{lon}")
-		else
-			blob = Twitter::Search.new(terms.join(' '))
-			ActionController::Base.logger.debug("twitter_search with #{terms} without lat or lon")
+		# turn into ordinary center and radius
+		# TODO radius is wrong
+		lat = map_n - map_s / 2 + map_s
+		lon = map_w - map_e / 2 + map_e
+		rad = 5
+		twitter_rad = "25mi"
+
+		# do a general purpose search with location if any else just do a search
+		begin
+			if map_s < 0.0 || map_s > 0.0 || map_n < 0.0 || map_n > 0.0 || map_e < 0.0 || map_e > 0.0 || map_w < 0.0 || map_w > 0.0
+				blob = Twitter::Search.new(terms.join(' ')).geocode(lat,lon,twitter_rad)  # TODO try conflating this verbosity
+				ActionController::Base.logger.debug("twitter_search with #{terms} and lat lon #{lat} #{lon}")
+			else
+				blob = Twitter::Search.new(terms.join(' '))
+				ActionController::Base.logger.debug("twitter_search with #{terms} without lat or lon")
+			end
+		rescue
 		end
 
-		if !blob 
+		if !blob || blob.length < 1
 			ActionController::Base.logger.debug("did not find any twitter search results?")
 			return [],[]
 		end

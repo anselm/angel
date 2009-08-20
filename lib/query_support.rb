@@ -1,6 +1,6 @@
 
 require 'dynamapper/geolocate.rb'
-require 'twitter_support/twitter_aggregate.rb'
+require 'lib/twitter_support/twitter_aggregate.rb'
 
 ############################################################################################
 #
@@ -60,65 +60,123 @@ class QuerySupport
 
 	#
 	# get query location
-	# i want to keep this logic at the controller level for now
 	#
-	def self.query_locate(q)
+	def self.query_locate(q,map_s,map_w,map_n,map_e)
 
-		# get time
-		# TODO implement
+		# TODO deal with time also
 		begins = nil
 		ends = nil
 
-		# compute get bounds if any
-		lat,lon,rad = 0,0,0
-		lat,lon,rad = Dynamapper.geolocate(q[:placenames].join(' ')) if q[:placenames].length
-		rad = 5 # TODO hack remove
-		q[:lat],q[:lon],q[:rad] = lat,lon,rad
+		# first we have no location
+		q[:s] = q[:w] = q[:n] = q[:e] = 0.0
+
+		# look for bounds information in a supplied string using brute force geocoder
+		lat,lon,rad = 0.0, 0.0, 0.0
+		if q[:placenames].length
+			lat,lon,rad = Dynamapper.geolocate(q[:placenames].join(' '))
+			rad = 5.0 # TODO hack remove
+		end
+		if lat < 0.0 || lat > 0.0 || lon < 0.0 || lon > 0.0
+			# did we get boundaries from user query as ascii? "pizza near pdx" for example.
+			q[:bounds_from_text] = "true"
+			q[:s] = lat - rad
+			q[:w] = lon - rad
+			q[:n] = lat + rad
+			q[:e] = lon + rad
+		else
+			# otherwise try get boundaries from supplied params - this is the more conventional case
+			q[:bounds_from_text] = "false"
+			if ( map_s < 0.0 || map_s > 0.0 || map_w < 0.0 || map_w > 0.0 || map_n > 0.0 || map_n < 0.0 || map_e < 0.0 || map_e > 0.0 )
+				q[:s] = map_s.to_f;
+				q[:w] = map_w.to_f;
+				q[:n] = map_n.to_f;
+				q[:e] = map_e.to_f;
+			end
+		end
 		ActionController::Base.logger.info "query: located the query #{q[:placenames].join(' ')} to #{lat} #{lon} #{rad}"
 		return q
-
 	end
 
-	def self.query(phrase,synchronous=false)
+	def self.query(question,map_s,map_w,map_n,map_e,synchronous=false)
 
 		# basic string parsing
-		q = QuerySupport::query_parse(phrase)
-		QuerySupport::query_locate(q)
+		q = QuerySupport::query_parse(question)
+		QuerySupport::query_locate(q,map_s,map_w,map_n,map_e)
 
-		# optionally pull in fresh content (only supports twitter for now)
-		TwitterSupport::aggregate_memoize(q,synchronous)
+		# Aggregate?
+		TwitterSupport::aggregate_memoize(q,true) if synchronous
 
 		# look at our internal database and return best results
 		results_length = 0
 		results = []
-		search,lat,lon,rad = q[:search],q[:lat],q[:lon],q[:rad]
+		words = q[:words]
+		s,w,n,e = q[:s],q[:w],q[:n],q[:e]
 
-		ActionController::Base.logger.info "Query: now looking for: #{search} at location #{lat} #{lon} #{rad}"
+		ActionController::Base.logger.info "Query: now looking for: #{words} at location #{s} #{w} #{n} #{e}"
 
-		# TODO need to figure out how to do tsearch AND ordinary search
+		conditions = []
+		condition_arguments = []
 
-		if ( lat < 0 || lat > 0 || lon < 0 || lon > 0 )
-			results_length = Note.count(:conditions =>  ["lat >= ? AND lat <= ? AND lon >= ? AND lon <= ?", lat-rad,lat+rad,lon-rad,lon+rad ] )
-			results = Note.all(:conditions =>  ["lat >= ? AND lat <= ? AND lon >= ? AND lon <= ?", lat-rad,lat+rad,lon-rad,lon+rad ] )
-		else
-			# TODO combine not eor
-			results = Note.find_by_tsearch(search) if search.length > 0
-			results_length = 0 # fix TODO
-			results.each do
-				results_length = results_length + 1
-			end
+		# if there are search terms then add them to the search boundary
+		# are we totally cleaning words to disallow garbage? TODO
+		if(words.length > 0 )
+			conditions << "description @@ to_tsquery(?)"
+			condition_arguments << words.join('&')
+			conditions << "title @@ to_tsquery(?)"
+			condition_arguments << words.join('&')
 		end
 
- results_length = 0
- results = []
- Note.all(:conditions => [ "kind = ?", Note::KIND_POST ], :limit => 50, :order => "id desc" ).each do |note|
-   results << note
-   results_length = results_length + 1
- end
- Note.all(:conditions => [ "kind = ?", Note::KIND_USER ], :limit => 50, :order => "id desc" ).each do |note|
-   results << note
-   results_length = results_length + 1
- end
+		# also add lat long constraints
+		# TODO deal with wrap around the planet
+		if ( s < 0 || s > 0 || w < 0 || w > 0 || n > 0 || n < 0 || e < 0 || e > 0 )
+			conditions << "lat >= ? AND lat <= ? AND lon >= ? AND lon <= ?"
+			condition_arguments << s;
+			condition_arguments << n;
+			condition_arguments << w;
+			condition_arguments << e;
+		end
+
+		# i am actually only interested in posts - not people right now
+		if true
+			conditions << "kind = ?"
+			condition_arguments << Note::KIND_POST
+		end
+
+		#
+		# collect a big old pile of posts
+		#
+		results_length = 0
+		results = []
+
+ActionController::Base.logger.info "ABOUT TO QUERY #{conditions} and #{condition_arguments.join(' *** ' ) } "
+# ABOUT TO QUERY description @@ to_tsquery(?) AND title @@ to_tsquery(?) AND kind = ? nullnullKIND_POST
+
+		conditions = [ conditions.join(' AND ') ] + condition_arguments
+
+		Note.all(:conditions => conditions , :limit => 255, :order => "id desc" ).each do |note|
+			results << note
+			results_length = results_length + 1
+		end
+
+ActionController::Base.logger.info "GOT #{results_length} posts "
+
+		#
+		# lets go ahead and inject in only the people who were associated with the posts we found (so the user can see them)
+		# TODO this could be cleaned up massively using a bit of smarter SQL that finds uniques only
+		#
+
+		people = {}
+		results.each do |post|
+			person = Note.find(:first,:conditions => { :id => post.owner_id } )
+			people[post.owner_id] = person if person != nil
+		end
+
+ActionController::Base.logger.info "GOT #{results_length} people "
+
+		people.each do |key,value|
+			results << value
+			results_length = results_length + 1
+		end
 
 		ActionController::Base.logger.info "Query: got results #{results} #{results_length}"
 
@@ -127,31 +185,5 @@ class QuerySupport
 
 		return q
 	end
-
-
-=begin
-	# i found solr to be very slow so this is not used now
-	def query_with_solr(phrase)
-		if ( lat < 0 || lat > 0 || lon < 0 || lon > 0 )
-			search << "lat:[#{lat-rad} TO #{lat+rad}]"
-			search << "lon:[#{lon-rad-rad} TO #{lon+rad+rad}]"
-		end
-		search_phrase = search.join(" AND ")
-		ActionController::Base.logger.info "Query: solr now looking for: #{search_phrase}"
-		if search.length
-			results = Note.find_by_solr(search_phrase,
-										:offset => 0,
-										:limit => 50
-										#:order => "id desc",
-										#:operator => "and"
-										)
-			total_hits = 0
-			total_hits = results.total_hits if results
-			results = results.docs if results
-			results = [] if !results
-		end
-		ActionController::Base.logger.info "Query: solr now done"
-	end
-=end
 
 end

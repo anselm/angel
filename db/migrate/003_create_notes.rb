@@ -1,6 +1,10 @@
 class CreateNotes < ActiveRecord::Migration
   def self.up
 
+	#
+	# Core of our basic subject matter definition
+	# See relations for extended metadata (below)
+	#
     create_table :notes do |t|
 
       t.string   :type
@@ -30,6 +34,13 @@ class CreateNotes < ActiveRecord::Migration
       t.timestamps
     end
 
+	#
+	# Notes can contain arbitrary meta-data in an RDF like manner.
+	#
+	# One consideration:
+	# If two notes contain the same meta-data that data is not conserved; it exists in duplicate for each node.
+	# This may make it slightly harder to find if two notes share the same attribute...
+	#
     create_table :relations do |t|
       t.string   :type
       t.string   :kind

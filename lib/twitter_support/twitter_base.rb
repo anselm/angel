@@ -174,7 +174,7 @@ class TwitterSupport
 		else
 			# TODO note that for some reason :updated_at is not set here - and we rely on this behavior but it is implicit.
 			party.update_attributes(:title => title, :description => description );
-			if lat < 0 || lat > 0 || lon < 0 || lon > 0
+			if lat < 0.0 || lat > 0.0 || lon < 0.0 || lon > 0.0
 				party.update_attributes(:lat => lat, :lon => lon )
 			end
 			ActionController::Base.logger.info "Updated a party with title #{title}"
@@ -240,7 +240,7 @@ class TwitterSupport
 		if note
 
 # test
-if lat || lon
+if lat > 0.0 || lat < 0.0 || lon > 0.0 || lon < 0.0
 note.update_attributes( :lat => lat, :lon => lon, :rad => rad )
 end
 # test end
@@ -272,13 +272,30 @@ end
 				)
 			note.save
 
-			# build a relationship to the owner - not really needed except for CNG traversals
+			# build a relationship to the owner - not really needed except for CNG traversals ( off for now )
 			# note.relation_add(Note::RELATION_OWNER,party.id)
 
-			# build a relationship to hash tags
-			# TODO verify that this works
-			args[:title].scan(/#[a-zA-Z]+/).each do |tag|
-				note.relation_add(Note::RELATION_TAG,tag[1..-1])
+			# build a relationship to tags
+			#args[:title].scan(/#[a-zA-Z]+/).each do |tag|
+			#	note.relation_add(Note::RELATION_TAG,tag[1..-1])
+			#end
+
+			begin
+				tags = {}
+				args[:title].gsub(/ ?(#\w+)/) { |tag| tag = tag.strip[1..-1].downcase; tags[tag] = tag }
+				tags.each do |key,tag|
+					note.relation_add(Note::RELATION_TAG,tag)
+				end
+			rescue
+			end
+
+			# build a relationship to urls
+			# TODO expand all URLS and try to get to a duplicate URL consistency; perhaps fingerprint the target page???
+			begin
+				args[:title].split.grep(/http[s]?:\/\/\w/).each do |url|
+					note.relation_add(Note::RELATION_URL,url)
+				end
+			rescue
 			end
 
 			ActionController::Base.logger.info "Saved a new post from #{party.title} ... #{title}"
@@ -289,7 +306,6 @@ end
 		#end
 		return note
 	end
-
 
 	##########################################################################################################
 	# twitter get a set of people objects from their names

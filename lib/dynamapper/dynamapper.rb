@@ -34,8 +34,11 @@ class Dynamapper
 
   attr_accessor :apikey
   attr_accessor :map_cover_all_points
-  attr_accessor :lat
-  attr_accessor :lon
+  attr_accessor :question
+  attr_accessor :south
+  attr_accessor :west
+  attr_accessor :north
+  attr_accessor :east
   attr_accessor :width
   attr_accessor :height
   attr_accessor :zoom
@@ -47,6 +50,7 @@ class Dynamapper
   # initialize()
   # 
   def initialize(args = {})
+    @south = @west = @east = @north = 0.0
     @apikey = args[:apikey]
     @map_cover_all_points = true
     @lat = args[:latitude] || 45.516510
@@ -553,17 +557,32 @@ function mapper_page_paint(blob) {
 //
 function mapper_page_paint_request(recenter) {
 
-	var q = document.getElementById("q");
 	if(map == null) return;
-	var center = map.getCenter();
-	var lat = 0;
-	var lng = 0;
-	if(center != null) {
-		lat = center.lat();
-		lng = center.lng();
+	var url = "/json?";
+
+	// tack on the search phrase
+	var q = document.getElementById("q");
+	if(q != null) {
+		q = q.value;
+		if(q != null && q.length < 1) q = null;
+	}
+	if(q != null) {
+		url = url + "q="+q+"&";
 	}
 
-	var url = "/json?q="+q+"&lat="+lat+"&lng="+lng;
+	// send the bounds upward to server as well
+	var sw = map.getBounds().getSouthWest();
+	var ne = map.getBounds().getNorthEast();
+	if(sw == null || ne == null) {
+		return;
+	}
+	var s = sw.lat();
+	var w = sw.lng();
+	var n = ne.lat();
+	var e = ne.lng();
+	url = url + "s="+s+"&w="+w+"&n="+n+"&e="+e;
+
+	// fetch the map; indicating work in progress by changing border color
 	map_div.style.border = "1px solid yellow";
 	new Ajax.Request(url, {
 		method:'get',
@@ -602,6 +621,20 @@ function mapper_initialize() {
   // setup custom icon support
   mapper_icons();
   // map.removeMapType(G_HYBRID_MAP);
+  // try to respect supplied map boundaries for the very first refresh before user does any actions
+  var did_not_center_yet = true;
+  map.south = #{@south};
+  map.west = #{@west};
+  map.north = #{@north};
+  map.east = #{@east};
+  if(map.north < 0.0 || map.north > 0.0 || map.south < 0.0 || map.south > 0.0) {
+    did_not_center_yet = false;
+    var bounds = new GLatLngBounds( new GLatLng(map.south,map.west,false), new GLatLng(map.north,map.east,false) );
+	var center = bounds.getCenter();
+	var zoom = map.getBoundsZoomLevel(bounds);
+	if(zoom < 2 ) zoom = 2;
+    map.setCenter(center,zoom);
+  }
   // capture map location whenever the map is moved and go ahead and ask for a view of that areas markers from our own server
   if(map_location_callback) {
     GEvent.addListener(map, "moveend", function() {
@@ -615,8 +648,10 @@ function mapper_initialize() {
   // add features from a statically cached list if any [ this can help make first page display a bit faster ]
   mapper_inject(map_markers_raw);
   // center on any data we have already if any [ slight tension here with dynamic updates so can be disabled ]
-  if(#{@map_cover_all_points}) {
-    mapper_center();
+  if( did_not_center_yet ) {
+	if(#{@map_cover_all_points}) {
+		mapper_center();
+	}
   }
   // ask to add features from a remote connection dynamically [ and will center on them ]
   mapper_page_paint_request(true);

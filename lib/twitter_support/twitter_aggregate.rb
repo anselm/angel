@@ -27,7 +27,10 @@ class TwitterSupport
 
 		ActionController::Base.logger.info "Query: aggregation of a query starting #{Time.now}"
 
-		lat,lon,rad = q[:lat],q[:lon],q[:rad]
+		map_s = q[:s]
+		map_w = q[:w]
+		map_n = q[:n]
+		map_e = q[:e]
 
 		# did the user supply some people as the anchor of a search?
 		# refresh them and get their friends ( this is cheap and can be done synchronously )
@@ -61,8 +64,8 @@ class TwitterSupport
 			end
 		else
 			# if there are no people to anchor the search then just let twitter do the search
-			ActionController::Base.logger.info "query: using a general search strategy looking for #{q[:words].join(' ')} near #{lat} #{lon} #{rad}"
-			self.twitter_search(q[:words],lat,lon,rad) if q[:words] && q[:words].length > 0
+			ActionController::Base.logger.info "query: using a general search strategy looking for #{q[:words].join(' ')} near #{map_s} #{map_w} #{map_n} #{map_e}"
+			self.twitter_search(q[:words],map_s,map_n,map_w,map_e) if q[:words] && q[:words].length > 0
 		end
 
 		# TODO idea

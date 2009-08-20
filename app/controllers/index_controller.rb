@@ -1,25 +1,56 @@
 
 require 'lib/query_support.rb'
-require 'json/pure'
+#require 'json/pure'
+#require 'json/add/rails'
 
 class IndexController < ApplicationController
-	
+
   #
-  # The client side is javascript so just deliver code to the client first
-  # and javascript will take over
+  # The client side is javascript so this does very litle
   #
   def index
+    # strive to supply session state of previous question if any to the map for json refresh
+	@map.question = nil
+    @map.question = session[:q] = params[:q] if params[:q]
+    @map.question = session[:q] if !params[:q]
+	# strive to supply a hint to the map regarding where to center 
+	@map.south = @map.west = @map.north = @map.east = 0.0
+	begin
+		# attempt to fetch map location from parameters
+		@map.south    = session[:s] = params[:s].to_f if params[:s]
+		@map.west     = session[:w] = params[:w].to_f if params[:w]
+		@map.north    = session[:n] = params[:n].to_f if params[:n]
+		@map.east     = session[:e] = params[:e].to_f if params[:e]
+		# otherwise fetch them from session state if present (or set to nil)
+		@map.south    = session[:s].to_f if !params[:s]
+		@map.west     = session[:w].to_f if !params[:w]
+		@map.north    = session[:n].to_f if !params[:n]
+		@map.east     = session[:e].to_f if !params[:e]
+	rescue
+	end
   end
 
   #
   # Our first pass at an API - handle place, person and subject queries
-  # and return json
   #
   def json
-    question = params[:q]
+
+    # pull user question and location of question; ignore session state
+	@q = nil
+    @q = session[:q] = params[:q].to_s if params[:q]
+	@s = @w = @n = @e = 0.0
+	begin
+		@s = session[:s] = params[:s].to_f if params[:s]
+		@w = session[:w] = params[:w].to_f if params[:w]
+		@n = session[:n] = params[:n].to_f if params[:n]
+		@e = session[:e] = params[:e].to_f if params[:e]
+	rescue
+	end
+
+    # pull user search term if supplied
     synchronous = false
     synchronous = true if params[:synchronous] && params[:synchronous] ==true
-    results = QuerySupport::query(question,synchronous)
+    results = QuerySupport::query(@q,@s,@w,@n,@e,synchronous)
     render :json => results.to_json
   end
 
