@@ -1,6 +1,6 @@
 
 require 'lib/query_support.rb'
-#require 'json/pure'
+require 'json/pure'
 #require 'json/add/rails'
 
 class IndexController < ApplicationController
