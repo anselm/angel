@@ -135,8 +135,13 @@ class QuerySupport
 			condition_arguments << w;
 			condition_arguments << e;
 		end
+		
+		# always disallow features with 0,0 as a location
+		if true
+			conditions << "lat <> 0 AND lon <> 0"
+		end
 
-		# i am actually only interested in posts - not people right now
+		# filter for posts; we'll collect only people related to those posts later
 		if true
 			conditions << "kind = ?"
 			condition_arguments << Note::KIND_POST
@@ -149,7 +154,6 @@ class QuerySupport
 		results = []
 
 ActionController::Base.logger.info "ABOUT TO QUERY #{conditions} and #{condition_arguments.join(' *** ' ) } "
-# ABOUT TO QUERY description @@ to_tsquery(?) AND title @@ to_tsquery(?) AND kind = ? nullnullKIND_POST
 
 		conditions = [ conditions.join(' AND ') ] + condition_arguments
 
@@ -162,7 +166,7 @@ ActionController::Base.logger.info "GOT #{results_length} posts "
 
 		#
 		# lets go ahead and inject in only the people who were associated with the posts we found (so the user can see them)
-		# TODO this could be cleaned up massively using a bit of smarter SQL that finds uniques only
+		# TODO this could be cleaned up massively using a bit of smarter SQL that finds uniques only or at least a HASH join
 		#
 
 		people = {}
@@ -170,10 +174,36 @@ ActionController::Base.logger.info "GOT #{results_length} posts "
 			person = Note.find(:first,:conditions => { :id => post.owner_id } )
 			people[post.owner_id] = person if person != nil
 		end
-
-ActionController::Base.logger.info "GOT #{results_length} people "
-
 		people.each do |key,value|
+			results << value
+			results_length = results_length + 1
+		end
+
+		#
+		# we also have a specific interest in 'entities' such as hashtags, urls, places and clusters
+		# here i am injecting 'fake' entities into the stream for now.
+		# later the thought is to promote some of the current edges to be first class entities
+		# annoyingly since these are not real notes they do not have unique ids.
+		# TODO should i promote urls and like concepts to be first class objects? [ probably ]
+		#
+
+		entities = {}
+		results.each do |post|
+			next if post.kind != Note::KIND_POST
+			post.relations_all(Note::RELATION_URL).each do |relation|
+				url = relation.value
+				next if entities[url]
+				note = Note.new
+				note.title = relation.value
+				note.id = post.id * 1000000 + relation.id  # TODO such a hack ugh.
+				note.lat = post.lat
+				note.lon = post.lon
+				note.owner_id = post.owner_id
+				note.kind = Note::KIND_URL
+				entities[url] = note
+			end
+		end
+		entities.each do |key,value|
 			results << value
 			results_length = results_length + 1
 		end

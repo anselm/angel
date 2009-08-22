@@ -500,11 +500,31 @@ function mapper_page_paint(blob) {
 	feature["iconWindowAnchor"] = [ 9, 2 ];
 	mapper_inject_feature(feature);
 
-	// a list to draw text to
-	var map_list = document.getElementById("map_list");
+	var glyph_url = "/dynamapper/icons/emblem-important.png";
+	var feature = {};
+	feature["kind"] = "icon";
+	feature["image"] = glyph_url;
+	feature["iconSize"] = [ 32, 32 ];
+	feature["iconAnchor"] = [ 9, 34 ];
+	feature["iconWindowAnchor"] = [ 9, 2 ];
+	mapper_inject_feature(feature);
 
 	// mark all objects as stale
 	mapper_mark_all_stale();
+
+	// a list to draw text to
+	var people_box = document.getElementById("people_box");
+	var posts_box = document.getElementById("posts_box");
+	var urls_box = document.getElementById("urls_box");
+	if ( people_box.hasChildNodes() ) {
+		while ( people_box.childNodes.length >= 1 ) { people_box.removeChild( people_box.firstChild ); }
+	}
+	if ( posts_box.hasChildNodes() ) {
+		while ( posts_box.childNodes.length >= 1 ) { posts_box.removeChild( posts_box.firstChild ); }
+	}
+	if ( urls_box.hasChildNodes() ) {
+		while ( urls_box.childNodes.length >= 1 ) { urls_box.removeChild( urls_box.firstChild ); }
+	}
 
 	// visit all the markers and add them
 	for (var i=0; i<markers.length; i++) {
@@ -543,19 +563,32 @@ function mapper_page_paint(blob) {
 		feature["lat"] = lat;
 		feature["lon"] = lon;
 		feature["glyph"] = glyph_post;
-		if( kind != "KIND_POST" ) feature["glyph"] = glyph_person;
+		if( kind == "KIND_USER" ) feature["glyph"] = glyph_person;
+		if( kind == "KIND_URL" ) feature["glyph"] = glyph_url;
 		mapper_inject_feature(feature);
 
 		// Draw a list of features as well
-		if(map_list) {
+		if(true) {
 			var div = document.createElement('div');
+			// build the children
 			if(div) {
-				div.innerHTML = "<img src='"+feature["glyph"]+"'></img> "+title;
+
 				div.style.border = "1px solid green";
-				map_list.appendChild(div);
+				div.style.width = "100%";
+				if(kind == "KIND_URL") {
+					div.innerHTML = "<img src='"+feature["glyph"]+"'></img> <a href='"+title+"'>"+title+"</a>";
+					people_box.appendChild(div);
+				}
+				if(kind == "KIND_USER") {
+					div.innerHTML = "<img src='"+feature["glyph"]+"'></img> <a href='http://twitter.com/"+title+"'>"+title+"</a>";
+					posts_box.appendChild(div);
+				}
+				if(kind == "KIND_POST") {
+					div.innerHTML = "<img src='"+feature["glyph"]+"'></img> "+title;
+					urls_box.appendChild(div);
+				}
 			}
 		}
-
 	}
 
 	// sweep the ones that are not part of this display
@@ -621,6 +654,7 @@ function mapper_page_paint_request(recenter) {
 
 /// start mapping engine (invoked once only)
 function mapper_initialize() {
+
   if(map_div) return;
   map_div = document.getElementById("map");
   if(!map_div) return;
