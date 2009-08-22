@@ -293,6 +293,11 @@ end
 			# TODO expand all URLS and try to get to a duplicate URL consistency; perhaps fingerprint the target page???
 			begin
 				args[:title].split.grep(/http[s]?:\/\/\w/).each do |url|
+					response = Net::HTTP.get_response(URI.parse(uri_str))
+					case response
+						when Net::HTTPRedirection then puts response['location']
+						when Net::HTTPOK then puts uri_str
+					end
 					note.relation_add(Note::RELATION_URL,url)
 				end
 			rescue

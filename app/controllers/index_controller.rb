@@ -1,33 +1,76 @@
-
+require 'net/http'
+require 'uri'
+require 'open-uri'
 require 'lib/query_support.rb'
+require 'note.rb'
+
 #require 'json/pure'
 #require 'json/add/rails'
 
 class IndexController < ApplicationController
 
+  def expand_url(url)
+    begin
+      timeout(60) do
+        uri = URI.parse(url)
+        http = Net::HTTP.new(uri.host)
+		http.open_timeout = 30
+		http.read_timeout = 60
+		if uri.host == "ping.fm" || uri.host == "www.ping.fm"
+			logger.info "ping.fm requires us to fetch the body"
+			response = http.get(uri.path)
+			return nil
+		else
+			response = http.head(uri.path) # get2(uri.path,{ 'Range' => 'bytes=0-1' })
+			if response.class == Net::HTTPRedirection || response.class == Net::HTTPMovedPermanently
+				logger.info "expand_url #{response} looking at relationship #{r.value} to become #{response['location']}"
+				return response['location']
+			end
+		end
+	  end
+    rescue => exception
+      logger.info "expand_url inner rescue error #{exception} while fetching #{url}"
+      return nil
+    end
+	return nil
+  end
+
+  def fix_relations
+    # fix the broken links
+    Relation.find(:all, :conditions => { :kind => Note::RELATION_URL } ).each do |r|
+      ActionController::Base.logger.info "looking at relationship #{r.value}"
+	  fixed = expand_url(r.value)
+	  if fixed
+	    r.value = fixed
+		r.save
+	  end
+	end
+  end
+
   #
   # The client side is javascript so this does very litle
   #
   def index
+
     # strive to supply session state of previous question if any to the map for json refresh
-	@map.question = nil
+    @map.question = nil
     @map.question = session[:q] = params[:q] if params[:q]
     @map.question = session[:q] if !params[:q]
-	# strive to supply a hint to the map regarding where to center 
-	@map.south = @map.west = @map.north = @map.east = 0.0
-	begin
-		# attempt to fetch map location from parameters
-		@map.south    = session[:s] = params[:s].to_f if params[:s]
-		@map.west     = session[:w] = params[:w].to_f if params[:w]
-		@map.north    = session[:n] = params[:n].to_f if params[:n]
-		@map.east     = session[:e] = params[:e].to_f if params[:e]
-		# otherwise fetch them from session state if present (or set to nil)
-		@map.south    = session[:s].to_f if !params[:s]
-		@map.west     = session[:w].to_f if !params[:w]
-		@map.north    = session[:n].to_f if !params[:n]
-		@map.east     = session[:e].to_f if !params[:e]
-	rescue
-	end
+    # strive to supply a hint to the map regarding where to center 
+    @map.south = @map.west = @map.north = @map.east = 0.0
+    begin
+	# attempt to fetch map location from parameters
+	@map.south    = session[:s] = params[:s].to_f if params[:s]
+	@map.west     = session[:w] = params[:w].to_f if params[:w]
+	@map.north    = session[:n] = params[:n].to_f if params[:n]
+	@map.east     = session[:e] = params[:e].to_f if params[:e]
+	# otherwise fetch them from session state if present (or set to nil)
+	@map.south    = session[:s].to_f if !params[:s]
+	@map.west     = session[:w].to_f if !params[:w]
+	@map.north    = session[:n].to_f if !params[:n]
+	@map.east     = session[:e].to_f if !params[:e]
+    rescue
+    end
   end
 
   #

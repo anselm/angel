@@ -32,26 +32,73 @@ class Note < ActiveRecord::Base
   # acts_as_solr :fields => [:title, {:lat=>:range_float}, {:lon=>:range_float}] # slower than heck - using tsearch instead
   acts_as_tsearch :fields => ["title","description"]
 
+  #
+  # The database architecture consists of nodes and edges
+  #
+  # Edges may relate two nodes
+  # Edges may just be about one node
+  # Edges may be labelled
+  #
+  # There is a ongoing design question regarding if some attributes should be first class nodes or just edges
+  # RELATION_URL is being treated as both an edge and as a first class node for example.
+  #
+
+=begin
   RELATIONS = %w{
-					RELATION_TAG
-					RELATION_CATEGORY
-					RELATION_ENTITY
-					RELATION_RELATION
-					RELATION_FRIEND
-					RELATION_URL
+					RELATION_TAG			# a tag or hashtag
+					RELATION_CATEGORY		# a formal category object similar to a tag but from a named set
+					RELATION_ENTITY			# a citation of an entity [ also see first class entities in notes ]
+					RELATION_RELATION		# an unlabelled relation between two notes
+					RELATION_FRIEND			# a friendship relation between two notes
+					RELATION_URL			# a citation of an url [ see also first class treatment of urls ]
+					RELATION_IMAGE			# a citation of an image
+					RELATION_AUDIO			# a citation of an audio
+					RELATION_MOVIE			# a citation of a movie
 				}
 
-   KINDS = %w{
-					KIND_USER
-					KIND_POST
+  KINDS = %w{
+					KIND_USER			# a stand in for a local user account - a user makes posts
+					KIND_FEED			# a feed - a feed makes posts
+					KIND_REPORTER			# a reporter person - makes posts
+					KIND_REPORT			# a kind of post (unused)
+					KIND_POST			# a user post
+					KIND_GROUP			# a grouping of posts
+					KIND_EVENT			# an event that groups posts
+					KIND_PLACE			# a place that groups posts
+					KIND_MAP			# a map that groups posts
+					KIND_FILTER			# a filter that groups posts
+					KIND_ENTITY			# an entity of some kind
+					KIND_URL			# a treatment of an url edge as a first class object [ used for client views ]
+					KIND_TAG			# a treatment of an edge as a first class object [ just an idea ]
+				}
+=end
+
+  RELATIONS = %w{
+					RELATION_TAG		
+					RELATION_CATEGORY
+					RELATION_ENTITY	
+					RELATION_RELATION
+					RELATION_FRIEND		
+					RELATION_URL	
+					RELATION_IMAGE
+					RELATION_AUDIO
+					RELATION_MOVIE
+				}
+
+  KINDS = %w{
+					KIND_USER	
 					KIND_FEED
 					KIND_REPORTER
 					KIND_REPORT
+					KIND_POST	
 					KIND_GROUP
 					KIND_EVENT
 					KIND_PLACE
-					KIND_MAP
-					KIND_FILTER
+					KIND_MAP	
+					KIND_FILTER	
+					KIND_ENTITY	
+					KIND_URL
+					KIND_TAG
 				}
 
   STATEBITS_RESERVED = 0
@@ -108,6 +155,13 @@ class Note
 	  r = Relation.find(:first, :conditions => { :note_id => self.id, :kind => kind } )
     end
     return r
+  end
+
+  def relations_all(kind = nil, sibling_id = nil)
+    query = { :note_id => self.id }
+    query[:kind] = kind if kind
+    query[:sibling_id] = sibling_id if sibling_id
+    return Relation.find(:all,:conditions=>query)
   end
 
   # TODO rate limit
