@@ -182,6 +182,7 @@ ENDING
   #
   def body()
 <<ENDING
+<form id="newplace" action="/" onsubmit="return mapper_goto_location()"><input type=submit value='refresh'></input></form>
 <div id="map" style="width:#{@width};height:#{@height};"></div>
 <div id="map_list"></div>
 ENDING
@@ -574,7 +575,7 @@ function mapper_page_paint(blob) {
 			if(div) {
 
 				div.style.border = "1px solid green";
-				div.style.width = "100%";
+				div.style.width = "300px";
 				if(kind == "KIND_URL") {
 					div.innerHTML = "<img src='"+feature["glyph"]+"'></img> <a href='"+title+"'>"+title+"</a>";
 					people_box.appendChild(div);
@@ -647,6 +648,23 @@ function mapper_page_paint_request(recenter) {
 
 }
 
+function mapper_goto_location() {
+	// send the bounds upward to server as well
+	var sw = map.getBounds().getSouthWest();
+	var ne = map.getBounds().getNorthEast();
+	if(sw == null || ne == null) {
+		return;
+	}
+	var s = sw.lat();
+	var w = sw.lng();
+	var n = ne.lat();
+	var e = ne.lng();
+	url = "/?s="+s+"&w="+w+"&n="+n+"&e="+e;
+        document.getElementById('newplace').action = url;
+        location.href = url;
+        return false;
+}
+
 /******************************************************************************************************************************************/
 // initialization - start up and add any statically defined markers - (we keep markers in javascript as an array to be processed by client)
 /******************************************************************************************************************************************/
@@ -687,7 +705,7 @@ function mapper_initialize() {
     GEvent.addListener(map, "moveend", function() {
       mapper_save_location();
 	  // when the map is moved go ahead and fetch new markers [ but do not center on them ]
-	  mapper_page_paint_request(false);
+//	  mapper_page_paint_request(false);
     });
 	// also capture map location once at least
 	mapper_save_location();

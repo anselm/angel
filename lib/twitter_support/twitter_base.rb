@@ -8,6 +8,37 @@ require 'twitter'
 
 class TwitterSupport
 
+
+	###########################################################################################
+	# expand url
+	###########################################################################################
+
+  def expand_url(url)
+    begin
+      timeout(60) do
+        uri = URI.parse(url)
+        http = Net::HTTP.new(uri.host)
+                http.open_timeout = 30
+                http.read_timeout = 60
+                if uri.host == "ping.fm" || uri.host == "www.ping.fm"
+                        logger.info "ping.fm requires us to fetch the body"
+                        response = http.get(uri.path)
+                        return nil
+                else
+                        response = http.head(uri.path) # get2(uri.path,{ 'Range' => 'bytes=0-1' })
+                        if response.class == Net::HTTPRedirection || response.class == Net::HTTPMovedPermanently
+                                logger.info "expand_url #{response} looking at relationship #{url} to become #{response['location']}"
+                                return response['location']
+                        end
+                end
+          end
+    rescue => exception
+      logger.info "expand_url inner rescue error #{exception} while fetching #{url}"
+      return nil
+    end
+        return nil
+  end
+
 	###########################################################################################
 	# encode url
 	###########################################################################################
@@ -298,6 +329,8 @@ end
 						when Net::HTTPRedirection then puts response['location']
 						when Net::HTTPOK then puts uri_str
 					end
+					expanded = expand_url(url)
+					url = expanded if expanded != nil
 					note.relation_add(Note::RELATION_URL,url)
 				end
 			rescue

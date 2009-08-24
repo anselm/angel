@@ -22,7 +22,7 @@ class IndexController < ApplicationController
 		else
 			response = http.head(uri.path) # get2(uri.path,{ 'Range' => 'bytes=0-1' })
 			if response.class == Net::HTTPRedirection || response.class == Net::HTTPMovedPermanently
-				logger.info "expand_url #{response} looking at relationship #{r.value} to become #{response['location']}"
+				logger.info "expand_url #{response} looking at relationship #{url} to become #{response['location']}"
 				return response['location']
 			end
 		end
