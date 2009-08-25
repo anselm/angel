@@ -1,15 +1,11 @@
-ENV["RAILS_ENV"] ||= defined?(Daemons) ? 'production' : 'development'
+#!/usr/local/bin/ruby
 
-# FIXME: pull in the platform.yml for the tag(s)
-# FEED = "http://twittervision.com/inaugreport.json"
-EXTRACTOR = Regexp.new(/^(\w+?):\s(.*)$/m)
+ENV["RAILS_ENV"] ||= defined?(Daemons) ? 'production' : 'development'
 
 require 'rubygems'
 require File.dirname(__FILE__) + "/../../config/environment"
-#require "../../config/environment"
 require 'json'
 require 'open-uri'
-# require 'twitterchive'
 require 'twitter_support/twitter_base.rb'
 require 'twitter_support/twitter_collect.rb'
 require 'twitter_support/twitter_aggregate.rb'

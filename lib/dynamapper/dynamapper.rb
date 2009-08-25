@@ -465,69 +465,64 @@ function mapper_inject(features) {
 // paint markers - this is somewhat application specialized and could be separated away
 /******************************************************************************************************************************************/
 
+var glyph_post = null;
+var glyph_person = null;
+var glyph_url = null;
+
+//
+// Define some common features
+//
+function mapper_page_paint_icons() {
+
+        if( glyph_url != null ) return;
+
+        if(true) { 
+        glyph_post = "/dynamapper/icons/weather-clear.png";
+        var feature = {};
+        feature["kind"] = "icon";
+        feature["image"] = glyph_post;
+        feature["iconSize"] = [ 32, 32 ];
+        feature["iconAnchor"] = [ 9, 34 ];
+        feature["iconWindowAnchor"] = [ 9, 2 ];
+        mapper_inject_feature(feature);
+        }
+
+        if(true) {
+        glyph_person = "/dynamapper/icons/emblem-favorite.png";
+        var feature = {};
+        feature["kind"] = "icon";
+        feature["image"] = glyph_person;
+        feature["iconSize"] = [ 32, 32 ];
+        feature["iconAnchor"] = [ 9, 34 ];
+        feature["iconWindowAnchor"] = [ 9, 2 ];
+        mapper_inject_feature(feature);
+        }
+
+        if(true) {
+        glyph_url = "/dynamapper/icons/emblem-important.png";
+        var feature = {};
+        feature["kind"] = "icon";
+        feature["image"] = glyph_url;
+        feature["iconSize"] = [ 32, 32 ];
+        feature["iconAnchor"] = [ 9, 34 ];
+        feature["iconWindowAnchor"] = [ 9, 2 ];
+        mapper_inject_feature(feature);
+        }
+}
+
 //
 // Paint a display in js
 //
-var mapper_page_update_already_busy = 0;
-function mapper_page_paint(blob) {
-
-	if(mapper_page_update_already_busy) { return true; }
-	mapper_page_update_already_busy = 1;
-
-	var dom_status = document.getElementById("status");
-	var dom_posts = document.getElementById("posts");
-	var dom_people = document.getElementById("parties");
-
-	var search = blob['search'];
-	var markers = blob['results'];
-	var words = blob['words'];
-
-	// Set iconography
-	var glyph_post = "/dynamapper/icons/weather-clear.png";
-	var feature = {};
-	feature["kind"] = "icon";
-	feature["image"] = glyph_post;
-	feature["iconSize"] = [ 32, 32 ];
-	feature["iconAnchor"] = [ 9, 34 ];
-	feature["iconWindowAnchor"] = [ 9, 2 ];
-	mapper_inject_feature(feature);
-
-	var glyph_person = "/dynamapper/icons/emblem-favorite.png";
-	var feature = {};
-	feature["kind"] = "icon";
-	feature["image"] = glyph_person;
-	feature["iconSize"] = [ 32, 32 ];
-	feature["iconAnchor"] = [ 9, 34 ];
-	feature["iconWindowAnchor"] = [ 9, 2 ];
-	mapper_inject_feature(feature);
-
-	var glyph_url = "/dynamapper/icons/emblem-important.png";
-	var feature = {};
-	feature["kind"] = "icon";
-	feature["image"] = glyph_url;
-	feature["iconSize"] = [ 32, 32 ];
-	feature["iconAnchor"] = [ 9, 34 ];
-	feature["iconWindowAnchor"] = [ 9, 2 ];
-	mapper_inject_feature(feature);
+function mapper_page_paint_markers(blob) {
 
 	// mark all objects as stale
 	mapper_mark_all_stale();
 
-	// a list to draw text to
-	var people_box = document.getElementById("people_box");
-	var posts_box = document.getElementById("posts_box");
-	var urls_box = document.getElementById("urls_box");
-	if ( people_box.hasChildNodes() ) {
-		while ( people_box.childNodes.length >= 1 ) { people_box.removeChild( people_box.firstChild ); }
-	}
-	if ( posts_box.hasChildNodes() ) {
-		while ( posts_box.childNodes.length >= 1 ) { posts_box.removeChild( posts_box.firstChild ); }
-	}
-	if ( urls_box.hasChildNodes() ) {
-		while ( urls_box.childNodes.length >= 1 ) { urls_box.removeChild( urls_box.firstChild ); }
-	}
+        // build icons
+        mapper_page_paint_icons();
 
 	// visit all the markers and add them
+	var markers = blob['results'];
 	for (var i=0; i<markers.length; i++) {
 
 		var item = markers[i]['note'];
@@ -555,48 +550,124 @@ function mapper_page_paint(blob) {
 		var begins = item['begins'];
 		var ends = item['ends'];
 
+		var glyph = glyph_post;
+		if( kind == "KIND_USER" ) glyph = glyph_person;
+		if( kind == "KIND_URL" ) glyph = glyph_url;
+
 		// Build map feature
 		// TODO - i should publish all related parties by drawing lines
 		// TODO - i should publish all the depictions from twitter as icons
-		var feature = {};
+		if(true) {
+                var feature = {};
 		feature["kind"] = "marker";
 		feature["title"] = title;
 		feature["lat"] = lat;
 		feature["lon"] = lon;
-		feature["glyph"] = glyph_post;
-		if( kind == "KIND_USER" ) feature["glyph"] = glyph_person;
-		if( kind == "KIND_URL" ) feature["glyph"] = glyph_url;
+		feature["glyph"] = glyph;
 		mapper_inject_feature(feature);
-
-		// Draw a list of features as well
-		if(true) {
-			var div = document.createElement('div');
-			// build the children
-			if(div) {
-
-				div.style.border = "1px solid green";
-				div.style.width = "300px";
-				if(kind == "KIND_URL") {
-					div.innerHTML = "<img src='"+feature["glyph"]+"'></img> <a href='"+title+"'>"+title+"</a>";
-					people_box.appendChild(div);
-				}
-				if(kind == "KIND_USER") {
-					div.innerHTML = "<img src='"+feature["glyph"]+"'></img> <a href='http://twitter.com/"+title+"'>"+title+"</a>";
-					posts_box.appendChild(div);
-				}
-				if(kind == "KIND_POST") {
-					div.innerHTML = "<img src='"+feature["glyph"]+"'></img> "+title;
-					urls_box.appendChild(div);
-				}
-			}
-		}
+                }
 	}
 
 	// sweep the ones that are not part of this display
 	mapper_hide_stale();
+}
 
-	mapper_page_update_already_busy = 0;
+function mapper_page_paint_text(blob) {
 
+        // a list to draw text to
+        var people_box = document.getElementById("people_box");
+        var posts_box = document.getElementById("posts_box");
+        var urls_box = document.getElementById("urls_box");
+        if ( people_box.hasChildNodes() ) {
+                while ( people_box.childNodes.length >= 1 ) { people_box.removeChild( people_box.firstChild ); }
+        }
+        if ( posts_box.hasChildNodes() ) {
+                while ( posts_box.childNodes.length >= 1 ) { posts_box.removeChild( posts_box.firstChild ); }
+        }
+        if ( urls_box.hasChildNodes() ) {
+                while ( urls_box.childNodes.length >= 1 ) { urls_box.removeChild( urls_box.firstChild ); }
+        }
+
+        // visit all the markers and add them
+        var count_url = 0;
+        var count_user = 0;
+        var count_post = 0;
+        var markers = blob['results'];
+alert('starting to draw list');
+        for (var i=0; i<markers.length; i++) {
+
+		var item = markers[i]['note'];
+
+                var id = item['id'];
+                var kind = item['kind'];
+                var lat = item['lat'];
+                var lon = item['lon'];
+                var title = item['title'];
+                var link = item['link'];
+                var description = item['description'];
+                var location = item['location'];
+                var created_at = item['created_at'];
+                var tagstring = item['tagstring'];
+                var statebits = item['statebits'];
+                var photo_file_name = item['photo_file_name'];
+                var photo_content_type = item['photo_content_type'];
+                var provenance = item['provenance'];
+                var owner_id = item['owner_id'];
+                var begins = item['begins'];
+                var ends = item['ends'];
+
+                var glyph = glyph_post;
+                if( kind == "KIND_USER" ) glyph = glyph_person;
+                if( kind == "KIND_URL" ) glyph = glyph_url;
+
+                // Draw a list of features as well
+                var div = document.createElement('div');
+                if(div) {
+                        div.style.border = "1px solid green";
+                        div.style.width = "300px";
+                        if(kind == "KIND_URL") {
+                                div.innerHTML = "<img src='"+glyph+"'></img> <a href='"+title+"'>"+title+"</a>";
+                                people_box.appendChild(div);
+                                count_url++;
+                        }
+                        if(kind == "KIND_USER") {
+                                div.innerHTML = "<img src='"+glyph+"'></img> <a href='http://twitter.com/"+title+"'>"+title+"</a>";
+                                posts_box.appendChild(div);
+                                count_user++;
+                        }
+                        if(kind == "KIND_POST") {
+                                div.innerHTML = "<img src='"+glyph+"'></img> "+title;
+                                urls_box.appendChild(div);
+                                count_post++;
+                        }
+                }
+	}
+        alert("total urls,users,posts = " + count_url + " " + count_user + " " + count_post );
+}
+
+var mapper_page_update_already_busy = 0;
+
+///
+/// Go ahead and paint the supplied set
+///
+function mapper_page_paint(blob) {
+
+        if(mapper_page_update_already_busy) { return true; }
+        mapper_page_update_already_busy = 1;
+
+        try {
+            mapper_page_paint_markers(blob);
+        } catch(err) {
+            alert(err);
+        }
+
+        try {
+            mapper_page_paint_text(blob);
+        } catch(err) {
+            alert(err);
+        }
+
+        mapper_page_update_already_busy = 0;
 }
 
 //
@@ -669,10 +740,10 @@ function mapper_goto_location() {
 // initialization - start up and add any statically defined markers - (we keep markers in javascript as an array to be processed by client)
 /******************************************************************************************************************************************/
 
-
-/// start mapping engine (invoked once only)
+///
+/// Start mapping engine once only
+///
 function mapper_initialize() {
-
   if(map_div) return;
   map_div = document.getElementById("map");
   if(!map_div) return;
@@ -695,27 +766,27 @@ function mapper_initialize() {
   if(map.north < 0.0 || map.north > 0.0 || map.south < 0.0 || map.south > 0.0) {
     map_please_recenter = false;
     var bounds = new GLatLngBounds( new GLatLng(map.south,map.west,false), new GLatLng(map.north,map.east,false) );
-	var center = bounds.getCenter();
-	var zoom = map.getBoundsZoomLevel(bounds);
-	if(zoom < 2 ) zoom = 2;
+    var center = bounds.getCenter();
+    var zoom = map.getBoundsZoomLevel(bounds);
+    if(zoom < 2 ) zoom = 2;
     map.setCenter(center,zoom);
   }
   // capture map location whenever the map is moved and go ahead and ask for a view of that areas markers from our own server
   if(map_location_callback) {
     GEvent.addListener(map, "moveend", function() {
       mapper_save_location();
-	  // when the map is moved go ahead and fetch new markers [ but do not center on them ]
-//	  mapper_page_paint_request(false);
+      // when the map is moved go ahead and fetch new markers [ but do not center on them ]
+      mapper_page_paint_request(false);
     });
-	// also capture map location once at least
-	mapper_save_location();
+    // also capture map location once at least
+    mapper_save_location();
   }
   // add features from a statically cached list if any [ this can help make first page display a bit faster ]
   mapper_inject(map_markers_raw);
   // center on any data we have already if any [ slight tension here with dynamic updates so can be disabled ]
   if( map_please_recenter ) {
 	if(#{@map_cover_all_points}) {
-		mapper_center();
+   	 	mapper_center();
 	}
   }
   // ask to add features from a remote connection dynamically [ and will center on them ]
@@ -726,15 +797,14 @@ function mapper_initialize() {
   }
 }
 
+// TODO consider switching back to this google provided abstraction wrapper
 // google.setOnLoadCallback(mapper_initialize);
 // google.load("maps", "2.x");
+
 mapper_initialize();
 
 </script>
 ENDING
-
-  end
-
 end
-
+end
 

@@ -5,38 +5,112 @@ require 'hpricot'
 require 'json'
 require 'lib/dynamapper/geolocate.rb'
 require 'twitter'
+require 'app/models/note.rb'
 
 class TwitterSupport
-
 
 	###########################################################################################
 	# expand url
 	###########################################################################################
 
-  def expand_url(url)
+  def self.expand_url(url)
     begin
       timeout(60) do
         uri = URI.parse(url)
         http = Net::HTTP.new(uri.host)
-                http.open_timeout = 30
-                http.read_timeout = 60
-                if uri.host == "ping.fm" || uri.host == "www.ping.fm"
-                        logger.info "ping.fm requires us to fetch the body"
-                        response = http.get(uri.path)
-                        return nil
-                else
-                        response = http.head(uri.path) # get2(uri.path,{ 'Range' => 'bytes=0-1' })
-                        if response.class == Net::HTTPRedirection || response.class == Net::HTTPMovedPermanently
-                                logger.info "expand_url #{response} looking at relationship #{url} to become #{response['location']}"
-                                return response['location']
-                        end
-                end
+        http.open_timeout = 30
+        http.read_timeout = 60
+        next if uri.host != 'bit.ly' && uri.host != 'tinyurl.com' && uri.host != 'tr.im'
+        ActionController::Base.logger.info "expand_url considering #{url} #{uri.host}"
+        if uri.host == "ping.fm" || uri.host == "www.ping.fm"
+          ActionController::Base.logger.info "ping.fm requires us to fetch the body"
+          response = http.get(uri.path)
+          return nil
+        else
+          response = http.head(uri.path) # get2(uri.path,{ 'Range' => 'bytes=0-1' })
+          if response.class == Net::HTTPRedirection || response.class == Net::HTTPMovedPermanently
+                ActionController::Base.logger.info "expand_url #{response} looking at relationship #{url} to become #{response['location']}"
+                return response['location']
+          # phishing block
+          #else if response['location'].include?("bit.ly/app/warning")
+	  #	return response['location']
           end
+        end
+      end
+    rescue Timeout::Error => errormsg
+      ActionController::Base.logger.info "expand_url timeout on #{url} #{errormsg}"
     rescue => exception
-      logger.info "expand_url inner rescue error #{exception} while fetching #{url}"
+      ActionController::Base.logger.info "expand_url inner rescue error #{exception} while fetching #{url}"
       return nil
     end
-        return nil
+    return nil
+  end
+
+  def self.expand_all_urls
+    # fix the broken links
+    Relation.find(:all, :conditions => { :kind => Note::RELATION_URL } ).each do |r|
+      ActionController::Base.logger.info "expand_all_urls: looking at relationship #{r.value}"
+      fixed = expand_url(r.value)
+      if fixed
+        r.value = fixed
+        r.save
+      end
+    end
+  end
+
+  def self.attach_note_to_urls(note)
+      ammended = false
+      begin 
+            parts = note.title.split
+            newparts = []
+            parts.each do |part|
+               segments = part.grep(/http[s]?:\/\/\w/)
+               if segments.length < 1
+                  newparts << part
+               else
+                  segments.each do |uri_str|
+                      ActionController::Base.logger.info "attach_note_to_urls: pondering #{uri_str}"
+                      expanded = expand_url(uri_str)
+                      if expanded != nil
+                          ammended = true
+                          uri_str = expanded
+                          newparts << uri_str
+                      end
+                      note.relation_add(Note::RELATION_URL,uri_str)
+                  end
+               end
+            end
+            if ammended == true && newparts.length > 0 
+              note.update_attribute(:title, newparts.join(' '))
+            end
+      rescue Timeout::Error => errormsg
+        ActionController::Base.logger.info "attach_note_to_urls: timeout failed on #{note.title} #{errormsg}"
+      rescue => errormsg
+        ActionController::Base.logger.info "attach_note_to_urls: failed on #{note.title} #{errormsg}"
+      end
+      return ammended
+  end
+
+  def self.attach_all_notes_to_all_urls
+    Note.find(:all, :conditions => { :kind => Note::KIND_POST } ).each do |note|
+      self.attach_note_to_urls(note)
+    end
+  end
+
+  def self.attach_note_to_tags(note)
+
+			begin
+				tags = {}
+				note.title.gsub(/ ?(#\w+)/) { |tag| tag = tag.strip[1..-1].downcase; tags[tag] = tag }
+				tags.each do |key,tag|
+					note.relation_add(Note::RELATION_TAG,tag)
+				end
+			rescue
+			end
+
+                        #note.title.scan(/#[a-zA-Z]+/).each do |tag|
+                        #       note.relation_add(Note::RELATION_TAG,tag[1..-1])
+                        #end
   end
 
 	###########################################################################################
@@ -306,35 +380,9 @@ end
 			# build a relationship to the owner - not really needed except for CNG traversals ( off for now )
 			# note.relation_add(Note::RELATION_OWNER,party.id)
 
-			# build a relationship to tags
-			#args[:title].scan(/#[a-zA-Z]+/).each do |tag|
-			#	note.relation_add(Note::RELATION_TAG,tag[1..-1])
-			#end
+			self.attach_note_to_tags(note)
 
-			begin
-				tags = {}
-				args[:title].gsub(/ ?(#\w+)/) { |tag| tag = tag.strip[1..-1].downcase; tags[tag] = tag }
-				tags.each do |key,tag|
-					note.relation_add(Note::RELATION_TAG,tag)
-				end
-			rescue
-			end
-
-			# build a relationship to urls
-			# TODO expand all URLS and try to get to a duplicate URL consistency; perhaps fingerprint the target page???
-			begin
-				args[:title].split.grep(/http[s]?:\/\/\w/).each do |url|
-					response = Net::HTTP.get_response(URI.parse(uri_str))
-					case response
-						when Net::HTTPRedirection then puts response['location']
-						when Net::HTTPOK then puts uri_str
-					end
-					expanded = expand_url(url)
-					url = expanded if expanded != nil
-					note.relation_add(Note::RELATION_URL,url)
-				end
-			rescue
-			end
+		 	self.attach_note_to_urls(note)
 
 			ActionController::Base.logger.info "Saved a new post from #{party.title} ... #{title}"
 

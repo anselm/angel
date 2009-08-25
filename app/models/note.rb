@@ -157,6 +157,16 @@ class Note
     return r
   end
 
+  def relation_first_exact(kind, value, sibling_id = nil)
+    r = nil
+    if sibling_id
+	  r = Relation.find(:first, :conditions => { :note_id => self.id, :kind => kind, :value => value, :sibling_id => sibling_id} )
+    else
+	  r = Relation.find(:first, :conditions => { :note_id => self.id, :kind => kind, :value => value } )
+    end
+    return r
+  end
+
   def relations_all(kind = nil, sibling_id = nil)
     query = { :note_id => self.id }
     query[:kind] = kind if kind
@@ -179,6 +189,9 @@ class Note
 	return results
   end
 
+  #
+  # destroy all the relations on something of a kind
+  #
   def relation_destroy(kind = nil, sibling_id = nil)
     query = { :note_id => self.id }
     query[:kind] = kind if kind
@@ -186,24 +199,33 @@ class Note
     Relation.destroy_all(query)
   end
 
+  #
+  # add each relation uniquely only - meaning that if the kind and value exist then do not add it again
+  # also note we always store as strings and we always remove head and tail whitespace
+  #
   def relation_add(kind, value, sibling_id = nil)
-    relation = relation_first(kind,sibling_id)
-	if relation
-		# TODO think about this line -> return if relation.value == value
-		relation.update_attributes(:value => value.to_s.strip, :sibling_id => sibling_id )
-		return
-	end
+    return if !value || value == nil
+    value = value.to_s.strip
+    relation = relation_first_exact(kind,value,sibling_id)
+    if relation
+	# relation.update_attributes(:value => value, :sibling_id => sibling_id )
+	return
+    end
     Relation.create!({
                  :note_id => self.id,
                  :sibling_id => sibling_id,
                  :kind => kind,
-                 :value => value.to_s.strip
+                 :value => value
                })
   end
 
+  #
+  # obliterate the previous kind of relation set and add the new set.
+  # for example erase all tags on something and then set new tags
+  #
   def relation_add_array(kind,value,sibling_id = nil)
     relation_destroy(kind,sibling_id)
-    return if !value
+    return if !value || value == nil || value.length == 0
     value.each do |v|
       Relation.create!({
                    :note_id => self.id,
@@ -214,7 +236,11 @@ class Note
     end
   end
 
+  #
+  # a helper to specifically deal with the ever so common hash tag pattern
+  #
   def relation_save_hash_tags(text)
+     return if !text || text == nil || text.length = 0
      text.scan(/#[a-zA-Z]+/i).each do |tag|
        relation_add(Note::RELATION_TAG,tag[1..-1])
      end

@@ -191,6 +191,9 @@ ActionController::Base.logger.info "GOT #{results_length} posts "
 		results.each do |post|
 			next if post.kind != Note::KIND_POST
 			post.relations_all(Note::RELATION_URL).each do |relation|
+
+ActionController::Base.logger.info "Query: got url results #{relation.kind} #{relation.value}"
+
 				url = relation.value
 				next if entities[url]
 				note = Note.new
