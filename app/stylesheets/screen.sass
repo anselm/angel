@@ -4,9 +4,11 @@
 @import compass/utilities.sass
 @import compass/misc.sass
 @import compass/layout.sass
+@import blueprint/modules/liquid.sass
+
 
 body
-  +showgrid
+  +blueprint-liquid-grid
   +blueprint-typography
   +blueprint-utilities
   +blueprint-debug
@@ -16,18 +18,68 @@ form
   +blueprint-form
 #container
   +container
+  :width 95%
   +showgrid
+
+#header
+  :height 190px
+  +column(24)
+  h1
+    :text-align center
+#map
+  +column(24)
+
+
+ul
+  :list-style-type none!important
+  :padding 0!important
+  :margin 0!important
+
+h2, h3
+  :margin-top 10px
+  a
+    +link-colors(#003, #033, #303, #333, #330)
+
 li
   a 
     +link-colors(#00c, #0cc, #c0c, #ccc, #cc0)
     
-#ellipsis, #tables, #people_box, #posts_box, #url_box, #tables
+#url_box
+  :clear both
+  
+#about_box
   +column(5)
+  img
+    +column(5)
+
+#posts_box
+  +column(9)
+
+#tabular_box
+  :clear both
+
+#people_box
+  +column(4)
+
+#places_box
+  +column(4, true)
+  
+#ellipsis
+  +column(24)  
 
 ol
-  +tag-cloud(1em)
+  +tag-cloud(1.05em)
+  +no-bullet
+  li
+    :float left
+    :display inline
+    :padding 6px
+
+.source
+  :font-weight 700
   
 #footer
-  
-  +container
   :background-color #c3c3c3
+  :text-align center
+  :height 150px
+  :color #888
