@@ -11,7 +11,7 @@ table { margin: 0; padding: 0; border: 0; font-weight: inherit; font-style: inhe
 
 a img { border: none; }
 
-body { background: url('/images/grid.png?1251089757'); }
+body { background: url('/images/grid.png?1251165336'); }
 body body { line-height: 1.5; font-family: Helvetica Neue, Arial, Helvetica, sans-serif; color: #333333; font-size: 75%; }
 body h1 { font-weight: normal; color: #222222; font-size: 3em; line-height: 1; margin-bottom: 0.5em; }
 body h1 img { margin: 0; }
@@ -64,7 +64,7 @@ body .first { margin-left: 0; padding-left: 0; }
 body .last { margin-right: 0; padding-right: 0; }
 body .top { margin-top: 0; padding-top: 0; }
 body .bottom { margin-bottom: 0; padding-bottom: 0; }
-body .showgrid { background: url('/images/grid.png?1251089757'); }
+body .showgrid { background: url('/images/grid.png?1251165336'); }
 body .error { padding: .8em; margin-bottom: 1em; border: 2px solid #dddddd; background: #fbe3e4; color: #8a1f11; border-color: #fbc2c4; }
 body .error a { color: #8a1f11; }
 body .notice { padding: .8em; margin-bottom: 1em; border: 2px solid #dddddd; background: #fff6bf; color: #514721; border-color: #ffd324; }
@@ -75,11 +75,10 @@ body .hide { display: none; }
 body .highlight { background: yellow; }
 body .added { background: #006600; color: white; }
 body .removed { background: #990000; color: white; }
-body .box { padding: 1.5em; margin-bottom: 1.5em; background: #E5ECF9; }
-body div.border { padding-right: 4px; margin-right: 5px; border-right: 1px solid #eeeeee; }
-body div.colborder { padding-right: 24px; margin-right: 25px; border-right: 1px solid #eeeeee; }
-body hr { background: #dddddd; color: #dddddd; clear: both; float: none; width: 100%; height: .1em; margin: 0 0 1.45em; border: none; }
-body hr.space { background: #dddddd; color: #dddddd; clear: both; float: none; width: 100%; height: .1em; margin: 0 0 1.45em; border: none; background: #fff; color: #fff; }
+body html, body body { height: 100%; }
+body “#container” { min-height: 100%; margin-bottom: -180px; }
+body “#container” “#container_footer_empty_div_hack” { height: 180px; }
+body “#footer” { clear: both; position: relative; height: 180px; }
 
 form label { font-weight: bold; }
 form fieldset { padding: 1.4em; margin: 0 0 1.5em 0; }
@@ -95,11 +94,26 @@ form input.text:focus, form input.title:focus, form textarea:focus, form select:
 form input.text, form input.title { width: 300px; }
 form textarea { width: 390px; height: 250px; }
 
-body.three-col #container { width: 950px; margin: 0 auto; overflow: hidden; display: inline-block; }
-body.three-col #container { display: block; }
-body.three-col #header, body.three-col #footer { display: inline; float: left; margin-right: 10px; width: 950px; }
-* html body.three-col #header, * html body.three-col #footer { overflow-x: hidden; }
-body.three-col #sidebar { display: inline; float: left; margin-right: 10px; width: 310px; }
-* html body.three-col #sidebar { overflow-x: hidden; }
-body.three-col #content { display: inline; float: left; margin-right: 0; width: 630px; }
-* html body.three-col #content { overflow-x: hidden; }
+#container { width: 950px; margin: 0 auto; overflow: hidden; display: inline-block; background: url('/images/grid.png?1251165336'); }
+#container { display: block; }
+
+li a { color: #0000cc; }
+li a:visited { color: #cccccc; }
+li a:focus { color: #cccc00; }
+li a:hover { color: #00cccc; }
+li a:active { color: #cc00cc; }
+
+#ellipsis, #tables, #people_box, #posts_box, #url_box, #tables { display: inline; float: left; margin-right: 10px; width: 190px; }
+* html #ellipsis, * html #tables, * html #people_box, * html #posts_box, * html #url_box, * html #tables { overflow-x: hidden; }
+
+ol { font-size: 1em; line-height: 1.2em; }
+ol .xxs, ol .xs, ol .s, ol .l, ol .xl, ol .xxl { line-height: 1.2em; }
+ol .xxs { font-size: 0.5em; }
+ol .xs { font-size: 0.667em; }
+ol .s { font-size: 0.75em; }
+ol .l { font-size: 1.333em; }
+ol .xl { font-size: 1.5em; }
+ol .xxl { font-size: 2em; }
+
+#footer { width: 950px; margin: 0 auto; overflow: hidden; display: inline-block; background-color: #c3c3c3; }
+#footer { display: block; }
