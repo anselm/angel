@@ -1,0 +1,114 @@
+@import blueprint/reset.sass
+@import partials/base.sass
+@import blueprint
+@import compass/utilities.sass
+@import compass/misc.sass
+@import compass/layout.sass
+@import blueprint/modules/liquid.sass
+@import blueprint/modules/fancy_type.sass
+
+!blueprint_table_header_color = #000
+!blueprint_table_stripe_color = #f8f8f8
+
+body
+  +blueprint-liquid-grid
+  +blueprint-typography
+  +blueprint-utilities
+  +blueprint-debug
+  +blueprint-interaction
+  +sticky-footer( 180px, “#container”, “#container_footer_empty_div_hack”, “#footer” )
+form
+  +blueprint-form
+#container
+  +container
+  :width 100%
+  +fancy-type
+  :font-size 1.5em
+  :background url("/images/gradient.gif") bottom repeat-x
+  :padding-bottom 50px
+#header
+  :height 340px
+  +column(24)
+  +prepend(1)
+  :border-bottom 3px solid #333
+  :background url("/images/bkg_grey.jpg") 10% 20% repeat-x
+  h1
+    :font-size 40px
+
+#map
+  +column(24)
+
+ul
+  :list-style-type none!important
+  :padding 0!important
+  :margin 0!important
+
+h3 
+  :width 100%
+  :margin-top 35px!important
+  :border-bottom 3px solid #333
+
+div h3 a
+  :text-decoration none
+
+h2, h3
+  :margin-top 10px
+  a
+    +link-colors(#003, #033, #303, #333, #330)
+
+li
+  a 
+    +link-colors(#00c, #0cc, #c0c, #ccc, #cc0)
+    
+#logo_box
+  :background url("/images/meedan_logo_tab.jpg") no-repeat
+  :height 225px
+  +column(4)
+
+#url_box
+  :clear both
+  +column(18)
+  +prepend(1)
+  a
+    +hover-link
+
+#posts_box
+  +column(9)
+  :margin-bottom 10px
+
+#tabular_box
+  :clear both
+  table th
+    :color #fff
+    :font-weight normal
+    span
+      :color #333
+  
+#people_box
+  +column(4)
+  +prepend(1)  
+
+#places_box
+  +column(4)
+  
+#ellipsis
+  +column(24)  
+
+ol
+  +tag-cloud(1.05em)
+  +no-bullet
+  li
+    :float left
+    :display inline
+    :padding 5px
+
+.source
+  :font-weight 700
+  
+#footer
+  :background-color #000
+  :text-align center
+  :height 150px
+  :color #888
+  :padding 50px
+  a 

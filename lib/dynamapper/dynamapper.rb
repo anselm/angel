@@ -565,7 +565,6 @@ function mapper_page_paint_markers(blob) {
 		feature["lon"] = lon;
 		feature["glyph"] = glyph;
 		mapper_inject_feature(feature);
-                }
 	}
 
 	// sweep the ones that are not part of this display
@@ -700,13 +699,10 @@ function mapper_page_paint_request(recenter) {
 	var e = ne.lng();
 	url = url + "s="+s+"&w="+w+"&n="+n+"&e="+e;
 
-	// fetch the map; indicating work in progress by changing border color
-	map_div.style.border = "1px solid yellow";
 	new Ajax.Request(url, {
 		method:'get',
 		requestHeaders: {Accept: 'application/json'},
 		onSuccess: function(transport) {
-			map_div.style.border = "1px solid green";
 			var blob = transport.responseText.evalJSON();
 			if( blob ) {
 				mapper_page_paint(blob);

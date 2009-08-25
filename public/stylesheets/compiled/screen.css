@@ -1,0 +1,304 @@
+html, body { margin: 0; padding: 0; border: 0; font-weight: inherit; font-style: inherit; font-size: 100%; font-family: inherit; vertical-align: baseline; }
+
+div, span, object, iframe, h1, h2, h3, h4, h5, h6, p, pre, a, abbr, acronym, address, code, del, dfn, em, img, dl, dt, dd, ol, ul, li, fieldset, form, label, legend, caption, tbody, tfoot, thead, tr { margin: 0; padding: 0; border: 0; font-weight: inherit; font-style: inherit; font-size: 100%; font-family: inherit; vertical-align: baseline; }
+
+blockquote, q { margin: 0; padding: 0; border: 0; font-weight: inherit; font-style: inherit; font-size: 100%; font-family: inherit; vertical-align: baseline; quotes: "" ""; }
+blockquote:before, q:before, blockquote:after, q:after { content: ""; }
+
+th, td, caption { margin: 0; padding: 0; border: 0; font-weight: inherit; font-style: inherit; font-size: 100%; font-family: inherit; vertical-align: baseline; text-align: left; font-weight: normal; vertical-align: middle; }
+
+table { margin: 0; padding: 0; border: 0; font-weight: inherit; font-style: inherit; font-size: 100%; font-family: inherit; vertical-align: baseline; border-collapse: separate; border-spacing: 0; vertical-align: middle; }
+
+a img { border: none; }
+
+body .container { min-width: 950px; width: 80%; margin: 0 auto; overflow: hidden; display: inline-block; }
+body .container { display: block; }
+body .span-1 { width: 4%; }
+body div.span-1 { display: inline; float: left; overflow: hidden; width: 4%; margin-right: 0.833em; }
+body .span-2 { width: 8%; }
+body div.span-2 { display: inline; float: left; overflow: hidden; width: 8%; margin-right: 0.833em; }
+body .span-3 { width: 12%; }
+body div.span-3 { display: inline; float: left; overflow: hidden; width: 12%; margin-right: 0.833em; }
+body .span-4 { width: 16%; }
+body div.span-4 { display: inline; float: left; overflow: hidden; width: 16%; margin-right: 0.833em; }
+body .span-5 { width: 20%; }
+body div.span-5 { display: inline; float: left; overflow: hidden; width: 20%; margin-right: 0.833em; }
+body .span-6 { width: 25%; }
+body div.span-6 { display: inline; float: left; overflow: hidden; width: 25%; margin-right: 0.833em; }
+body .span-7 { width: 29%; }
+body div.span-7 { display: inline; float: left; overflow: hidden; width: 29%; margin-right: 0.833em; }
+body .span-8 { width: 33%; }
+body div.span-8 { display: inline; float: left; overflow: hidden; width: 33%; margin-right: 0.833em; }
+body .span-9 { width: 37%; }
+body div.span-9 { display: inline; float: left; overflow: hidden; width: 37%; margin-right: 0.833em; }
+body .span-10 { width: 41%; }
+body div.span-10 { display: inline; float: left; overflow: hidden; width: 41%; margin-right: 0.833em; }
+body .span-11 { width: 45%; }
+body div.span-11 { display: inline; float: left; overflow: hidden; width: 45%; margin-right: 0.833em; }
+body .span-12 { width: 50%; }
+body div.span-12 { display: inline; float: left; overflow: hidden; width: 50%; margin-right: 0.833em; }
+body .span-13 { width: 54%; }
+body div.span-13 { display: inline; float: left; overflow: hidden; width: 54%; margin-right: 0.833em; }
+body .span-14 { width: 58%; }
+body div.span-14 { display: inline; float: left; overflow: hidden; width: 58%; margin-right: 0.833em; }
+body .span-15 { width: 62%; }
+body div.span-15 { display: inline; float: left; overflow: hidden; width: 62%; margin-right: 0.833em; }
+body .span-16 { width: 66%; }
+body div.span-16 { display: inline; float: left; overflow: hidden; width: 66%; margin-right: 0.833em; }
+body .span-17 { width: 70%; }
+body div.span-17 { display: inline; float: left; overflow: hidden; width: 70%; margin-right: 0.833em; }
+body .span-18 { width: 75%; }
+body div.span-18 { display: inline; float: left; overflow: hidden; width: 75%; margin-right: 0.833em; }
+body .span-19 { width: 79%; }
+body div.span-19 { display: inline; float: left; overflow: hidden; width: 79%; margin-right: 0.833em; }
+body .span-20 { width: 83%; }
+body div.span-20 { display: inline; float: left; overflow: hidden; width: 83%; margin-right: 0.833em; }
+body .span-21 { width: 87%; }
+body div.span-21 { display: inline; float: left; overflow: hidden; width: 87%; margin-right: 0.833em; }
+body .span-22 { width: 91%; }
+body div.span-22 { display: inline; float: left; overflow: hidden; width: 91%; margin-right: 0.833em; }
+body .span-23 { width: 95%; }
+body div.span-23 { display: inline; float: left; overflow: hidden; width: 95%; margin-right: 0.833em; }
+body .span-24 { width: 100%; }
+body div.span-24 { display: inline; float: left; overflow: hidden; width: 100%; margin-right: 0; }
+body div.last { margin-right: 0; }
+body .append-1 { padding-right: 4%; }
+body .append-2 { padding-right: 8%; }
+body .append-3 { padding-right: 12%; }
+body .append-4 { padding-right: 16%; }
+body .append-5 { padding-right: 20%; }
+body .append-6 { padding-right: 25%; }
+body .append-7 { padding-right: 29%; }
+body .append-8 { padding-right: 33%; }
+body .append-9 { padding-right: 37%; }
+body .append-10 { padding-right: 41%; }
+body .append-11 { padding-right: 45%; }
+body .append-12 { padding-right: 50%; }
+body .append-13 { padding-right: 54%; }
+body .append-14 { padding-right: 58%; }
+body .append-15 { padding-right: 62%; }
+body .append-16 { padding-right: 66%; }
+body .append-17 { padding-right: 70%; }
+body .append-18 { padding-right: 75%; }
+body .append-19 { padding-right: 79%; }
+body .append-20 { padding-right: 83%; }
+body .append-21 { padding-right: 87%; }
+body .append-22 { padding-right: 91%; }
+body .append-23 { padding-right: 95%; }
+body .prepend-1 { padding-left: 4%; }
+body .prepend-2 { padding-left: 8%; }
+body .prepend-3 { padding-left: 12%; }
+body .prepend-4 { padding-left: 16%; }
+body .prepend-5 { padding-left: 20%; }
+body .prepend-6 { padding-left: 25%; }
+body .prepend-7 { padding-left: 29%; }
+body .prepend-8 { padding-left: 33%; }
+body .prepend-9 { padding-left: 37%; }
+body .prepend-10 { padding-left: 41%; }
+body .prepend-11 { padding-left: 45%; }
+body .prepend-12 { padding-left: 50%; }
+body .prepend-13 { padding-left: 54%; }
+body .prepend-14 { padding-left: 58%; }
+body .prepend-15 { padding-left: 62%; }
+body .prepend-16 { padding-left: 66%; }
+body .prepend-17 { padding-left: 70%; }
+body .prepend-18 { padding-left: 75%; }
+body .prepend-19 { padding-left: 79%; }
+body .prepend-20 { padding-left: 83%; }
+body .prepend-21 { padding-left: 87%; }
+body .prepend-22 { padding-left: 91%; }
+body .prepend-23 { padding-left: 95%; }
+body .pull-1 { margin-left: -3.332em; }
+body .pull-2 { margin-left: -6.664em; }
+body .pull-3 { margin-left: -9.996em; }
+body .pull-4 { margin-left: -13.328em; }
+body .pull-5 { margin-left: -16.66em; }
+body .pull-6 { margin-left: -19.992em; }
+body .pull-7 { margin-left: -23.324em; }
+body .pull-8 { margin-left: -26.656em; }
+body .pull-9 { margin-left: -29.988em; }
+body .pull-10 { margin-left: -33.32em; }
+body .pull-11 { margin-left: -36.652em; }
+body .pull-12 { margin-left: -39.984em; }
+body .pull-13 { margin-left: -43.316em; }
+body .pull-14 { margin-left: -46.648em; }
+body .pull-15 { margin-left: -49.98em; }
+body .pull-16 { margin-left: -53.312em; }
+body .pull-17 { margin-left: -56.644em; }
+body .pull-18 { margin-left: -59.976em; }
+body .pull-19 { margin-left: -63.308em; }
+body .pull-20 { margin-left: -66.64em; }
+body .pull-21 { margin-left: -69.972em; }
+body .pull-22 { margin-left: -73.304em; }
+body .pull-23 { margin-left: -76.636em; }
+body .pull-24 { margin-left: -79.968em; }
+body .push-1 { display: inline; float: right; margin-top: 0; margin-left: 1.5em; margin-right: -3.332em; margin-bottom: 0; }
+body .push-2 { display: inline; float: right; margin-top: 0; margin-left: 1.5em; margin-right: -6.664em; margin-bottom: 0; }
+body .push-3 { display: inline; float: right; margin-top: 0; margin-left: 1.5em; margin-right: -9.996em; margin-bottom: 0; }
+body .push-4 { display: inline; float: right; margin-top: 0; margin-left: 1.5em; margin-right: -13.328em; margin-bottom: 0; }
+body .push-5 { display: inline; float: right; margin-top: 0; margin-left: 1.5em; margin-right: -16.66em; margin-bottom: 0; }
+body .push-6 { display: inline; float: right; margin-top: 0; margin-left: 1.5em; margin-right: -19.992em; margin-bottom: 0; }
+body .push-7 { display: inline; float: right; margin-top: 0; margin-left: 1.5em; margin-right: -23.324em; margin-bottom: 0; }
+body .push-8 { display: inline; float: right; margin-top: 0; margin-left: 1.5em; margin-right: -26.656em; margin-bottom: 0; }
+body .push-9 { display: inline; float: right; margin-top: 0; margin-left: 1.5em; margin-right: -29.988em; margin-bottom: 0; }
+body .push-10 { display: inline; float: right; margin-top: 0; margin-left: 1.5em; margin-right: -33.32em; margin-bottom: 0; }
+body .push-11 { display: inline; float: right; margin-top: 0; margin-left: 1.5em; margin-right: -36.652em; margin-bottom: 0; }
+body .push-12 { display: inline; float: right; margin-top: 0; margin-left: 1.5em; margin-right: -39.984em; margin-bottom: 0; }
+body .push-13 { display: inline; float: right; margin-top: 0; margin-left: 1.5em; margin-right: -43.316em; margin-bottom: 0; }
+body .push-14 { display: inline; float: right; margin-top: 0; margin-left: 1.5em; margin-right: -46.648em; margin-bottom: 0; }
+body .push-15 { display: inline; float: right; margin-top: 0; margin-left: 1.5em; margin-right: -49.98em; margin-bottom: 0; }
+body .push-16 { display: inline; float: right; margin-top: 0; margin-left: 1.5em; margin-right: -53.312em; margin-bottom: 0; }
+body .push-17 { display: inline; float: right; margin-top: 0; margin-left: 1.5em; margin-right: -56.644em; margin-bottom: 0; }
+body .push-18 { display: inline; float: right; margin-top: 0; margin-left: 1.5em; margin-right: -59.976em; margin-bottom: 0; }
+body .push-19 { display: inline; float: right; margin-top: 0; margin-left: 1.5em; margin-right: -63.308em; margin-bottom: 0; }
+body .push-20 { display: inline; float: right; margin-top: 0; margin-left: 1.5em; margin-right: -66.64em; margin-bottom: 0; }
+body .push-21 { display: inline; float: right; margin-top: 0; margin-left: 1.5em; margin-right: -69.972em; margin-bottom: 0; }
+body .push-22 { display: inline; float: right; margin-top: 0; margin-left: 1.5em; margin-right: -73.304em; margin-bottom: 0; }
+body .push-23 { display: inline; float: right; margin-top: 0; margin-left: 1.5em; margin-right: -76.636em; margin-bottom: 0; }
+body .push-24 { display: inline; float: right; margin-top: 0; margin-left: 1.5em; margin-right: -79.968em; margin-bottom: 0; }
+body body { line-height: 1.5; font-family: Helvetica Neue, Arial, Helvetica, sans-serif; color: #333333; font-size: 75%; }
+body h1 { font-weight: normal; color: #222222; font-size: 3em; line-height: 1; margin-bottom: 0.5em; }
+body h1 img { margin: 0; }
+body h2 { font-weight: normal; color: #222222; font-size: 2em; margin-bottom: 0.75em; }
+body h3 { font-weight: normal; color: #222222; font-size: 1.5em; line-height: 1; margin-bottom: 1em; }
+body h4 { font-weight: normal; color: #222222; font-size: 1.2em; line-height: 1.25; margin-bottom: 1.25em; }
+body h5 { font-weight: normal; color: #222222; font-size: 1em; font-weight: bold; margin-bottom: 1.5em; }
+body h6 { font-weight: normal; color: #222222; font-size: 1em; font-weight: bold; }
+body h2 img, body h3 img, body h4 img, body h5 img, body h6 img { margin: 0; }
+body p { margin: 0 0 1.5em; }
+body p img.left { display: inline; float: left; margin: 1.5em 1.5em 1.5em 0; padding: 0; }
+body p img.right { display: inline; float: right; margin: 1.5em 0 1.5em 1.5em; padding: 0; }
+body a { text-decoration: underline; color: #000099; }
+body a:visited { color: #000066; }
+body a:focus { color: black; }
+body a:hover { color: black; }
+body a:active { color: #cc0099; }
+body blockquote { margin: 1.5em; color: #666; font-style: italic; }
+body strong { font-weight: bold; }
+body em { font-style: italic; }
+body dfn { font-style: italic; font-weight: bold; }
+body sup, body sub { line-height: 0; }
+body abbr, body acronym { border-bottom: 1px dotted #666; }
+body address { margin: 0 0 1.5em; font-style: italic; }
+body del { color: #666; }
+body pre { margin: 1.5em 0; white-space: pre; }
+body pre, body code, body tt { font: 1em 'andale mono', 'lucida console', monospace; line-height: 1.5; }
+body li ul, body li ol { margin: 0 1.5em; }
+body ul { margin: 0 1.5em 1.5em 1.5em; list-style-type: disc; }
+body ol { margin: 0 1.5em 1.5em 1.5em; list-style-type: decimal; }
+body dl { margin: 0 0 1.5em 0; }
+body dl dt { font-weight: bold; }
+body dd { margin-left: 1.5em; }
+body table { margin-bottom: 1.4em; width: 100%; }
+body th { font-weight: bold; }
+body thead th { background: black; }
+body th, body td, body caption { padding: 4px 10px 4px 5px; }
+body tr.even td { background: #f8f8f8; }
+body tfoot { font-style: italic; }
+body caption { background: #eee; }
+body .quiet { color: #666666; }
+body .loud { color: #111111; }
+body .clear { clear: both; }
+body .nowrap { white-space: nowrap; }
+body .clearfix { overflow: hidden; display: inline-block; }
+body .clearfix { display: block; }
+body .small { font-size: .8em; margin-bottom: 1.875em; line-height: 1.875em; }
+body .large { font-size: 1.2em; line-height: 2.5em; margin-bottom: 1.25em; }
+body .first { margin-left: 0; padding-left: 0; }
+body .last { margin-right: 0; padding-right: 0; }
+body .top { margin-top: 0; padding-top: 0; }
+body .bottom { margin-bottom: 0; padding-bottom: 0; }
+body .showgrid { background: url('/images/grid.png?1251165336'); }
+body .error { padding: .8em; margin-bottom: 1em; border: 2px solid #dddddd; background: #fbe3e4; color: #8a1f11; border-color: #fbc2c4; }
+body .error a { color: #8a1f11; }
+body .notice { padding: .8em; margin-bottom: 1em; border: 2px solid #dddddd; background: #fff6bf; color: #514721; border-color: #ffd324; }
+body .notice a { color: #514721; }
+body .success { padding: .8em; margin-bottom: 1em; border: 2px solid #dddddd; background: #e6efc2; color: #264409; border-color: #c6d880; }
+body .success a { color: #264409; }
+body .hide { display: none; }
+body .highlight { background: yellow; }
+body .added { background: #006600; color: white; }
+body .removed { background: #990000; color: white; }
+body html, body body { height: 100%; }
+body “#container” { min-height: 100%; margin-bottom: -180px; }
+body “#container” “#container_footer_empty_div_hack” { height: 180px; }
+body “#footer” { clear: both; position: relative; height: 180px; }
+
+form label { font-weight: bold; }
+form fieldset { padding: 1.4em; margin: 0 0 1.5em 0; }
+form legend { font-weight: bold; font-size: 1.2em; }
+form input.text, form input.title, form input[type=text] { margin: 0.5em 0; background-color: #fff; padding: 5px; }
+form input.title { font-size: 1.5em; }
+form input[type=checkbox], form input.checkbox, form input[type=radio], form input.radio { position: relative; top: 0.25em; }
+form textarea { margin: 0.5em 0; padding: 5px; }
+form select { margin: 0.5em 0; }
+form fieldset { border: 1px solid #cccccc; }
+form input.text, form input.title, form textarea, form select { border: 1px solid #bbbbbb; }
+form input.text:focus, form input.title:focus, form textarea:focus, form select:focus { border: 1px solid #666666; }
+form input.text, form input.title { width: 300px; }
+form textarea { width: 390px; height: 250px; }
+
+#container { min-width: 950px; width: 80%; margin: 0 auto; overflow: hidden; display: inline-block; width: 100%; font-size: 1.5em; background: url("/images/gradient.gif") bottom repeat-x; padding-bottom: 50px; }
+#container { display: block; }
+#container p + p { text-indent: 2em; margin-top: -1.5em; /* Don't want this in forms. */ }
+form #container p + p { text-indent: 0; }
+#container p.incr, #container .incr p { font-size: 0.833em; line-height: 1.44em; margin-bottom: 1.5em; }
+#container .caps { font-variant: small-caps; letter-spacing: 1px; text-transform: lowercase; font-size: 1.2em; line-height: 1%; font-weight: bold; padding: 0 2px; }
+#container .dquo { margin-left: -!offset; }
+#container .alt { color: #666; font-family: "Warnock Pro", "Goudy Old Style","Palatino","Book Antiqua", Georgia, serif; font-style: italic; font-weight: normal; }
+
+#header { height: 340px; display: inline; float: left; overflow: hidden; width: 100%; margin-right: 0.833em; padding-left: 4%; border-bottom: 3px solid #333; background: url("/images/bkg_grey.jpg") 10% 20% repeat-x; }
+#header h1 { font-size: 40px; }
+
+#map { display: inline; float: left; overflow: hidden; width: 100%; margin-right: 0.833em; }
+
+ul { list-style-type: none!important; padding: 0!important; margin: 0!important; }
+
+h3 { width: 100%; margin-top: 35px!important; border-bottom: 3px solid #333; }
+
+div h3 a { text-decoration: none; }
+
+h2, h3 { margin-top: 10px; }
+h2 a, h3 a { color: #000033; }
+h2 a:visited, h3 a:visited { color: #333333; }
+h2 a:focus, h3 a:focus { color: #333300; }
+h2 a:hover, h3 a:hover { color: #003333; }
+h2 a:active, h3 a:active { color: #330033; }
+
+li a { color: #0000cc; }
+li a:visited { color: #cccccc; }
+li a:focus { color: #cccc00; }
+li a:hover { color: #00cccc; }
+li a:active { color: #cc00cc; }
+
+#logo_box { background: url("/images/meedan_logo_tab.jpg") no-repeat; height: 225px; display: inline; float: left; overflow: hidden; width: 16%; margin-right: 0.833em; }
+
+#url_box { clear: both; display: inline; float: left; overflow: hidden; width: 75%; margin-right: 0.833em; padding-left: 4%; }
+#url_box a { text-decoration: none; }
+#url_box a:hover { text-decoration: underline; }
+
+#posts_box { display: inline; float: left; overflow: hidden; width: 37%; margin-right: 0.833em; margin-bottom: 10px; }
+
+#tabular_box { clear: both; }
+#tabular_box table th { color: #fff; font-weight: normal; }
+#tabular_box table th span { color: #333; }
+
+#people_box { display: inline; float: left; overflow: hidden; width: 16%; margin-right: 0.833em; padding-left: 4%; }
+
+#places_box { display: inline; float: left; overflow: hidden; width: 16%; margin-right: 0.833em; }
+
+#ellipsis { display: inline; float: left; overflow: hidden; width: 100%; margin-right: 0.833em; }
+
+ol { font-size: 1.05em; line-height: 1.26em; list-style-type: none; margin-left: 0px; }
+ol .xxs, ol .xs, ol .s, ol .l, ol .xl, ol .xxl { line-height: 1.26em; }
+ol .xxs { font-size: 0.525em; }
+ol .xs { font-size: 0.7em; }
+ol .s { font-size: 0.788em; }
+ol .l { font-size: 1.4em; }
+ol .xl { font-size: 1.575em; }
+ol .xxl { font-size: 2.1em; }
+ol li { float: left; display: inline; padding: 5px; }
+
+.source { font-weight: 700; }
+
+#footer { background-color: #000; text-align: center; height: 150px; color: #888; padding: 50px; }
