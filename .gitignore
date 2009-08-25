@@ -17,3 +17,7 @@ public/system/photos/*
 public/photos/*
 public/system/**/*
 db/schema.rb
+public/restart.txt
+public/stylesheets/compiled
+tmp
+app/stylesheets

@@ -574,8 +574,6 @@ function mapper_page_paint(blob) {
 			// build the children
 			if(div) {
 
-				div.style.border = "1px solid green";
-				div.style.width = "300px";
 				if(kind == "KIND_URL") {
 					div.innerHTML = "<img src='"+feature["glyph"]+"'></img> <a href='"+title+"'>"+title+"</a>";
 					people_box.appendChild(div);
@@ -629,13 +627,10 @@ function mapper_page_paint_request(recenter) {
 	var e = ne.lng();
 	url = url + "s="+s+"&w="+w+"&n="+n+"&e="+e;
 
-	// fetch the map; indicating work in progress by changing border color
-	map_div.style.border = "1px solid yellow";
 	new Ajax.Request(url, {
 		method:'get',
 		requestHeaders: {Accept: 'application/json'},
 		onSuccess: function(transport) {
-			map_div.style.border = "1px solid green";
 			var blob = transport.responseText.evalJSON();
 			if( blob ) {
 				mapper_page_paint(blob);
