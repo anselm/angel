@@ -191,9 +191,9 @@ body dl dt { font-weight: bold; }
 body dd { margin-left: 1.5em; }
 body table { margin-bottom: 1.4em; width: 100%; }
 body th { font-weight: bold; }
-body thead th { background: #c3d9ff; }
+body thead th { background: black; }
 body th, body td, body caption { padding: 4px 10px 4px 5px; }
-body tr.even td { background: #e5ecf9; }
+body tr.even td { background: #f8f8f8; }
 body tfoot { font-style: italic; }
 body caption { background: #eee; }
 body .quiet { color: #666666; }
@@ -238,15 +238,25 @@ form input.text:focus, form input.title:focus, form textarea:focus, form select:
 form input.text, form input.title { width: 300px; }
 form textarea { width: 390px; height: 250px; }
 
-#container { min-width: 950px; width: 80%; margin: 0 auto; overflow: hidden; display: inline-block; width: 95%; background: url('/images/grid.png?1251165336'); }
+#container { min-width: 950px; width: 80%; margin: 0 auto; overflow: hidden; display: inline-block; width: 100%; font-size: 1.5em; background: url("/images/gradient.gif") bottom repeat-x; padding-bottom: 50px; }
 #container { display: block; }
+#container p + p { text-indent: 2em; margin-top: -1.5em; /* Don't want this in forms. */ }
+form #container p + p { text-indent: 0; }
+#container p.incr, #container .incr p { font-size: 0.833em; line-height: 1.44em; margin-bottom: 1.5em; }
+#container .caps { font-variant: small-caps; letter-spacing: 1px; text-transform: lowercase; font-size: 1.2em; line-height: 1%; font-weight: bold; padding: 0 2px; }
+#container .dquo { margin-left: -!offset; }
+#container .alt { color: #666; font-family: "Warnock Pro", "Goudy Old Style","Palatino","Book Antiqua", Georgia, serif; font-style: italic; font-weight: normal; }
 
-#header { height: 190px; display: inline; float: left; overflow: hidden; width: 100%; margin-right: 0.833em; }
-#header h1 { text-align: center; }
+#header { height: 140px; display: inline; float: left; overflow: hidden; width: 100%; margin-right: 0.833em; padding-left: 4%; border-bottom: 3px solid #333; background: url("/images/bkg_grey.jpg") 10% 20% repeat-x; }
+#header h1 { font-size: 40px; }
 
 #map { display: inline; float: left; overflow: hidden; width: 100%; margin-right: 0.833em; }
 
 ul { list-style-type: none!important; padding: 0!important; margin: 0!important; }
+
+h3 { width: 100%; margin-top: 35px!important; border-bottom: 3px solid #333; }
+
+div h3 a { text-decoration: none; }
 
 h2, h3 { margin-top: 10px; }
 h2 a, h3 a { color: #000033; }
@@ -261,18 +271,21 @@ li a:focus { color: #cccc00; }
 li a:hover { color: #00cccc; }
 li a:active { color: #cc00cc; }
 
-#url_box { clear: both; }
+#logo_box { background: url("/images/meedan_logo_tab.jpg") no-repeat; height: 225px; display: inline; float: left; overflow: hidden; width: 16%; margin-right: 0; }
 
-#about_box { display: inline; float: left; overflow: hidden; width: 20%; margin-right: 0.833em; }
-#about_box img { display: inline; float: left; overflow: hidden; width: 20%; margin-right: 0.833em; }
+#url_box { clear: both; display: inline; float: left; overflow: hidden; width: 75%; margin-right: 0.833em; padding-left: 4%; }
+#url_box a { text-decoration: none; }
+#url_box a:hover { text-decoration: underline; }
 
-#posts_box { display: inline; float: left; overflow: hidden; width: 37%; margin-right: 0.833em; }
+#posts_box { display: inline; float: left; overflow: hidden; width: 37%; margin-right: 0.833em; margin-bottom: 10px; }
 
 #tabular_box { clear: both; }
+#tabular_box table th { color: #fff; font-weight: normal; }
+#tabular_box table th span { color: #333; }
 
-#people_box { display: inline; float: left; overflow: hidden; width: 16%; margin-right: 0.833em; }
+#people_box { display: inline; float: left; overflow: hidden; width: 16%; margin-right: 0.833em; padding-left: 4%; }
 
-#places_box { display: inline; float: left; overflow: hidden; width: 16%; margin-right: 0; }
+#places_box { display: inline; float: left; overflow: hidden; width: 16%; margin-right: 0.833em; }
 
 #ellipsis { display: inline; float: left; overflow: hidden; width: 100%; margin-right: 0.833em; }
 
@@ -288,4 +301,4 @@ ol li { float: left; display: inline; padding: 6px; }
 
 .source { font-weight: 700; }
 
-#footer { background-color: #c3c3c3; text-align: center; height: 150px; color: #888; }
+#footer { background-color: #000; text-align: center; height: 150px; color: #888; padding: 50px; }

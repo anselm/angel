@@ -9,3 +9,14 @@
 // Or you can set !blueprint_grid_width to a fixed value and unset !blueprint_container_size -- it will be calculated for you.
 !blueprint_grid_width   = (!blueprint_container_size + !blueprint_grid_margin) / !blueprint_grid_columns - !blueprint_grid_margin
 
+= left_rounded_corners(!radius = 4px)
+  -webkit-border-radius-bottomleft= !radius
+  -webkit-border-radius-topleft= !radius
+  -moz-border-radius-bottomleft= !radius
+  -moz-border-radius-topleft= !radius
+
+= right_rounded_corners(!radius = 4px)
+  -webkit-border-radius-topright= !radius
+  -webkit-border-radius-bottomright= !radius
+  -moz-border-radius-topright= !radius
+  -moz-border-radius-bottomright= !radius
