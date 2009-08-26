@@ -260,6 +260,66 @@ var icon_index = 0;
 // helper utilities
 /******************************************************************************************************************************************/
 
+function mapper_make_links_clickable(twitter,username) {
+    var status;
+
+    /* buggy
+    // http://deanjrobinson.com/wp-content/uploads/2009/07/blogger-mod.js.txt
+    // status = twitter.replace(/((https?|s?ftp|ssh)\:\/\/[^"\s\<\>]*[^.,;'">\:\s\<\>\)\]\!])/g, function(url) {
+    // status = twitter.replace(/http[s]?:\/\[a-zA-Z0-9_]/g, function(url) {
+    // status = twitter.replace(/https?:\/\/([-\w\.]+)+(:\d+)?(\/([\w/_\.]*(\?\S+)?)?)?/g, function(url) {
+    //  return '<a href="'+url+'">'+url+'</a>';
+    // })
+    status = twitter.replace(/\B@([_a-z0-9]+)/ig, function(reply) {
+      return reply.charAt(0)+'<a href="http://twitter.com/'+reply.substring(1)+'">'+reply.substring(1)+'</a>';
+    }).replace(/\B#([_a-z0-9]+)/ig, function(hashtag) {
+      return '<a href="http://search.twitter.com/search?q=%23'+hashtag.substring(1)+'">'+hashtag+'</a>';
+    });
+    */
+
+    var results = twitter.split(" ");
+    for(var i = 0; i < results.length; i++ ) {
+      var xxx = results[i];
+      if(xxx.startsWith("http://")) {
+        results[i] = "<a href='"+xxx+"'>"+xxx+"</a>";
+      }
+      else if(xxx.startsWith("@")) {
+        results[i] = "<a href='http://twitter.com/"+xxx.substring(1)+"'>"+xxx+"</a>";
+      }
+      else if(xxx.startsWith("#")) {
+        results[i] = "<a href='http://search.twitter.com/search?q=%23"+xxx.substring(1)+"'>"+xxx+"</a>";
+      }
+    }
+    status = results.join(" ");
+
+    return '<a href="http://twitter.com/'+username+'">'+username+'</a> ' + status;
+}
+
+function relative_time(time_value) {
+  var values = time_value.split(" ");
+  time_value = values[1] + " " + values[2] + ", " + values[5] + " " + values[3];
+  var parsed_date = Date.parse(time_value);
+  var relative_to = (arguments.length > 1) ? arguments[1] : new Date();
+  var delta = parseInt((relative_to.getTime() - parsed_date) / 1000);
+  delta = delta + (relative_to.getTimezoneOffset() * 60);
+
+  if (delta < 60) {
+    return 'less than a minute ago';
+  } else if(delta < 120) {
+    return 'about a minute ago';
+  } else if(delta < (60*60)) {
+    return (parseInt(delta / 60)).toString() + ' minutes ago';
+  } else if(delta < (120*60)) {
+    return 'about an hour ago';
+  } else if(delta < (24*60*60)) {
+    return 'about ' + (parseInt(delta / 3600)).toString() + ' hours ago';
+  } else if(delta < (48*60*60)) {
+    return '1 day ago';
+  } else {
+    return (parseInt(delta / 86400)).toString() + ' days ago';
+  }
+}
+
 /// convenience utility: drag event handler
 function mapper_disable_dragging() {
   if( map ) map.disableDragging();
@@ -565,6 +625,7 @@ function mapper_page_paint_markers(blob) {
 		feature["lon"] = lon;
 		feature["glyph"] = glyph;
 		mapper_inject_feature(feature);
+		}
 	}
 
 	// sweep the ones that are not part of this display
@@ -592,7 +653,6 @@ function mapper_page_paint_text(blob) {
         var count_user = 0;
         var count_post = 0;
         var markers = blob['results'];
-alert('starting to draw list');
         for (var i=0; i<markers.length; i++) {
 
 		var item = markers[i]['note'];
@@ -614,6 +674,12 @@ alert('starting to draw list');
                 var owner_id = item['owner_id'];
                 var begins = item['begins'];
                 var ends = item['ends'];
+                var ownername = "person"
+                for (var j=0; j<markers.length; j++) {
+                  if(markers[j]['note']['id'] == owner_id) {
+                     ownername = markers[j]['note']['title']
+                  }
+                }
 
                 var glyph = glyph_post;
                 if( kind == "KIND_USER" ) glyph = glyph_person;
@@ -635,13 +701,13 @@ alert('starting to draw list');
                                 count_user++;
                         }
                         if(kind == "KIND_POST") {
-                                div.innerHTML = "<img src='"+glyph+"'></img> "+title;
+                                div.innerHTML = "<img src='"+glyph+"'></img> "+mapper_make_links_clickable(title,ownername);
                                 urls_box.appendChild(div);
                                 count_post++;
                         }
                 }
 	}
-        alert("total urls,users,posts = " + count_url + " " + count_user + " " + count_post );
+        // alert("total urls,users,posts = " + count_url + " " + count_user + " " + count_post );
 }
 
 var mapper_page_update_already_busy = 0;

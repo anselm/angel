@@ -20,7 +20,7 @@ class TwitterSupport
         http = Net::HTTP.new(uri.host)
         http.open_timeout = 30
         http.read_timeout = 60
-        next if uri.host != 'bit.ly' && uri.host != 'tinyurl.com' && uri.host != 'tr.im'
+        return nil if uri.host != 'bit.ly' && uri.host != 'tinyurl.com' && uri.host != 'tr.im'
         ActionController::Base.logger.info "expand_url considering #{url} #{uri.host}"
         if uri.host == "ping.fm" || uri.host == "www.ping.fm"
           ActionController::Base.logger.info "ping.fm requires us to fetch the body"
@@ -29,7 +29,7 @@ class TwitterSupport
         else
           response = http.head(uri.path) # get2(uri.path,{ 'Range' => 'bytes=0-1' })
           if response.class == Net::HTTPRedirection || response.class == Net::HTTPMovedPermanently
-                ActionController::Base.logger.info "expand_url #{response} looking at relationship #{url} to become #{response['location']}"
+                ActionController::Base.logger.info "expand_url revision #{response} #{url} -> #{response['location']}"
                 return response['location']
           # phishing block
           #else if response['location'].include?("bit.ly/app/warning")
@@ -81,7 +81,9 @@ class TwitterSupport
                end
             end
             if ammended == true && newparts.length > 0 
-              note.update_attribute(:title, newparts.join(' '))
+              title = newparts.join(' ')
+              note.update_attribute(:title, title )
+              ActionController::Base.logger.info "attach_note_to_urls: saved note revision #{title}"
             end
       rescue Timeout::Error => errormsg
         ActionController::Base.logger.info "attach_note_to_urls: timeout failed on #{note.title} #{errormsg}"

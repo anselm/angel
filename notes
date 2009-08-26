@@ -1,11 +1,8 @@
  - navigation returns zero results sometimes
 
- - only two urls
-
- - there are still bitly urls around
-
  - reap and fetch persistently
 
  - why is dynamic presentation failing????  [ also should i have a deferred mode? ]
 
+ - javascript url expansion should show pretty urls
 
