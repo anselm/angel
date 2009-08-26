@@ -182,7 +182,6 @@ ENDING
   #
   def body()
 <<ENDING
-<form id="newplace" action="/" onsubmit="return mapper_goto_location()"><input type=submit value='refresh'></input></form>
 <div id="map" style="width:#{@width};height:#{@height};"></div>
 <div id="map_list"></div>
 ENDING
@@ -686,23 +685,22 @@ function mapper_page_paint_text(blob) {
                 if( kind == "KIND_URL" ) glyph = glyph_url;
 
                 // Draw a list of features as well
-                var div = document.createElement('div');
-                if(div) {
-                        div.style.border = "1px solid green";
-                        div.style.width = "300px";
+                var node = document.createElement('li');
+                if(node) {
+
                         if(kind == "KIND_URL") {
-                                div.innerHTML = "<img src='"+glyph+"'></img> <a href='"+title+"'>"+title+"</a>";
-                                people_box.appendChild(div);
+                                node.innerHTML = "<a href='"+title+"'>"+title+"</a>";
+                                urls_box.appendChild(node);
                                 count_url++;
                         }
                         if(kind == "KIND_USER") {
-                                div.innerHTML = "<img src='"+glyph+"'></img> <a href='http://twitter.com/"+title+"'>"+title+"</a>";
-                                posts_box.appendChild(div);
+                                node.innerHTML = "<a href='http://twitter.com/"+title+"'>"+title+"</a>";
+                                people_box.appendChild(node);
                                 count_user++;
                         }
                         if(kind == "KIND_POST") {
-                                div.innerHTML = "<img src='"+glyph+"'></img> "+mapper_make_links_clickable(title,ownername);
-                                urls_box.appendChild(div);
+                                node.innerHTML = mapper_make_links_clickable(title,ownername);
+                                posts_box.appendChild(node);
                                 count_post++;
                         }
                 }
@@ -721,13 +719,13 @@ function mapper_page_paint(blob) {
         mapper_page_update_already_busy = 1;
 
         try {
-            mapper_page_paint_markers(blob);
+            mapper_page_paint_text(blob);
         } catch(err) {
             alert(err);
         }
-
+        
         try {
-            mapper_page_paint_text(blob);
+            mapper_page_paint_markers(blob);
         } catch(err) {
             alert(err);
         }
