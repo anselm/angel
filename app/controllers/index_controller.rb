@@ -5,8 +5,15 @@ require 'lib/query_support.rb'
 require 'json/pure'
 #require 'json/add/rails'
 require 'note.rb'
+require 'world_boundaries.rb'
 
 class IndexController < ApplicationController
+
+  def test
+   @what = "something"
+   @testresult = WorldBoundaries.test('Iraq',100,100)
+   render :layout => nil
+  end
 
   #
   # The client side is javascript so this does very litle
@@ -65,7 +72,7 @@ class IndexController < ApplicationController
   #
   # below is a test for flash globe - merge in above or throw away TODO
   #
-  def test
+  def test2
     # we'll return a selection of recent posts that can be used to update the globe 
     @notes = Note.find(:all, :limit => 50, :order => "updated_at DESC", :conditions => { :kind => 'post' } );
     # from those posts I'd like to also return the related users
