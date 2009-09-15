@@ -72,17 +72,36 @@ class WorldBoundaries < ActiveRecord::Base
     point.x < min_x || point.x > max_x || point.y < min_y || point.y > max_y
   end
 
-  def self.test(country,x,y) 
-     poly = WorldBoundaries.find(:first, :conditions => [ "cntry_name = ?", country ] );
+  def self.polygon_country(country_name)
+    country = WorldBoundaries.find(:first, :conditions => [ "cntry_name = ?", country_name ] );
+    return country
+  end
+
+  def self.polygon_inside?(country,x,y) 
      point = Pointed.new(x,y)
-     poly.the_geom.each do |feature|
-       feature.each do |elem|
-         status = self.contains_point?(elem,point)
+     country.the_geom.each do |multipolygon|
+       multipolygon.each do |linearring|
+         status = self.contains_point?(linearring,point)
          return true if status == true
        end
      end
      return false
   end 
+
+  def self.polygon_extent(country)
+     x1 = x2 = y1 = y2 = nil
+     country.the_geom.each do |multipolygon|
+       multipolygon.each do |linearring|
+         linearring.each do |point|
+           x1 = point.x if x1 == nil || point.x < x1
+           x2 = point.x if x2 == nil || point.x > x2
+           y1 = point.y if y1 == nil || point.y < y1
+           y2 = point.y if y2 == nil || point.y > y2
+         end
+       end
+     end
+     return x1,x2,y1,y2
+  end
 
 end
 

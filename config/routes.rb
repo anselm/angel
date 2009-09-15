@@ -15,6 +15,7 @@ ActionController::Routing::Routes.draw do |map|
  
   map.json  'json', :controller => 'index', :action => 'json' 
   map.xml   'xml', :controller => 'index', :action => 'xml' 
+  map.rss   'rss', :controller => 'index', :action => 'rss' 
 
   # map.connect 'notes/:number', :controller => 'notes', :action => 'search'
   map.resources :notes, :collection => { :search => [:get, :post] }
