@@ -6,7 +6,11 @@ Also see the /about page on the site for other details that may be relevant.
 
 1) You will need postgres and postgis.  These are used for spatial queries and for full text search as well as ordinary database storage. It is unlikely you'll get this running on mysql easily.
 
-Make a spatially enabled database like so:
+You'll need the world borders in the database - see this url:
+
+http://blog.newsplore.com/2009/02/22/spincloud-labs-political-boundaries-overlay-in-google-maps-part-1/comment-page-1
+
+Basically Make a spatially enabled database like so:
 
    createuser -p  # name angel password angel
    createdb -O angel angel
@@ -14,7 +18,10 @@ Make a spatially enabled database like so:
    psql -d angel -f /usr/local/share/postgis/lwpostgis.sql
    psql -d angel -f /usr/local/share/postgis/spatial_ref_sys.sql
    # see : http://mappinghacks.com/data/
-   # wget http://mappinghacks.com/data/world_boundaries.zip
+   # wget http://mappinghacks.com/data/world_borders.zip
+   shp2pgsql -d boundaries_shp/TM_WORLD_BORDERS-0.2.shp world_boundaries angel > wb_dump.sql
+
+
    psql angel < world_boundaries.sql 
 
 2) There are a pile of gems that are required:
