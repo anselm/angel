@@ -2,7 +2,7 @@ require 'net/http'
 require 'uri'
 require 'open-uri'
 require 'lib/query_support.rb'
-require 'json/pure'
+# require 'json/pure'
 #require 'json/add/rails'
 require 'note.rb'
 
