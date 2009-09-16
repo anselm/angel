@@ -1,16 +1,38 @@
-About
+===============
+HOW TO INSTALL
+===============
 
-  A locative media framework
-  Based on ideas from Ushahidi and Thingster and others
+Also see the /about page on the site for other details that may be relevant.
 
-Plugins
+1) You will need postgres and postgis.  These are used for spatial queries and for full text search as well as ordinary database storage. It is unlikely you'll get this running on mysql easily.
 
-   - tsearch2 requires postgresql as a database
-   - requires keys for a number of third party services
+Make a spatially enabled database like so:
 
-Optional but nice: How I load test and real world data - this loads some data to seed the system with:
+   createuser -p  # name angel password angel
+   createdb -O angel angel
+   createlang plpgsql angel
+   psql -d angel -f /usr/local/share/postgis/lwpostgis.sql
+   psql -d angel -f /usr/local/share/postgis/spatial_ref_sys.sql
+   # see : http://mappinghacks.com/data/
+   # wget http://mappinghacks.com/data/world_boundaries.zip
+   psql angel < world_boundaries.sql 
+
+2) There are a pile of gems that are required:
+
+   gem install GeoRuby # used by: script/plugin install git://github.com/fragility/spatial_adapter.git
+   gem install sanitize
+   gem install tsearch2
+   gem install json-pure
+   gem install ...
+
+3) There is a settings.yml file that has pile of third party requirements such as keys from metacarta.
+
+4) There is some test data to seed the database - you can load it like this:
 
   rake db:migrate:redo
   rake db:seed
 
+5) I like to use passenger phusion - it is optiona.
+
+6) type "script/server start" to run the application.  it will appear on port 80 and you can use a web browser to see it.
 

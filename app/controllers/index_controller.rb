@@ -5,13 +5,39 @@ require 'lib/query_support.rb'
 # require 'json/pure'
 #require 'json/add/rails'
 require 'note.rb'
+require 'world_boundaries.rb'
 
 class IndexController < ApplicationController
+
+  def rss
+    @country = 'Iraq'
+    @country = params[:country] if params[:country]
+    @multipolygon = WorldBoundaries.polygon_country(@country)
+    @w,@e,@s,@n = WorldBoundaries.polygon_extent(@multipolygon)
+    synchronous = false
+    results = QuerySupport::query(@q,@s,@w,@n,@e,synchronous)
+    @posts = []
+    results[:results].each do |result|
+      next if result.kind != Note::KIND_POST
+      if WorldBoundaries.polygon_inside?(@multipolygon,result.lon,result.lat)
+        @posts << result
+      end
+    end
+    headers["Content-Type"] = "application/xml; charset=utf-8"
+    render :layout => false
+  end
+
+  def test
+    x1,x2,y1,y2 = WorldBoundaries.extent('Iraq')
+    @testresult = WorldBoundaries.inside?('Iraq',100,100)
+    render :layout => nil
+  end
 
   #
   # The client side is javascript so this does very litle
   #
   def index
+
 
     # strive to supply session state of previous question if any to the map for json refresh
     @map.question = nil
@@ -39,10 +65,10 @@ class IndexController < ApplicationController
   #
   def json
 
-    # pull user question and location of question; ignore session state
-	@q = nil
+    # preferentially pull user question and location of question; ignore session state
+    @q = nil
     @q = session[:q] = params[:q].to_s if params[:q]
-	@s = @w = @n = @e = 0.0
+    @s = @w = @n = @e = 0.0
 	begin
 		@s = session[:s] = params[:s].to_f if params[:s]
 		@w = session[:w] = params[:w].to_f if params[:w]
@@ -55,6 +81,8 @@ class IndexController < ApplicationController
     synchronous = false
     synchronous = true if params[:synchronous] && params[:synchronous] ==true
     results = QuerySupport::query(@q,@s,@w,@n,@e,synchronous)
+
+
     render :json => results.to_json
   end
 
@@ -65,7 +93,7 @@ class IndexController < ApplicationController
   #
   # below is a test for flash globe - merge in above or throw away TODO
   #
-  def test
+  def test2
     # we'll return a selection of recent posts that can be used to update the globe 
     @notes = Note.find(:all, :limit => 50, :order => "updated_at DESC", :conditions => { :kind => 'post' } );
     # from those posts I'd like to also return the related users

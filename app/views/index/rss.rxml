@@ -1,0 +1,18 @@
+xml.instruct!
+xml.rss (:version => "2.0", "xmlns:georss" => "http://www.georss.org/georss") {
+xml.channel {
+xml.title("Meedan Twitter RSS By Country")
+xml.link("http://meedan.net")
+xml.description("Twitter enhanced with location info")
+xml.language('en-us')
+for post in @posts
+xml.item do
+xml.title(post.title)
+xml.description(post.description)
+xml.georss :point do
+xml.text! post.lat.to_s + ' ' + post.lon.to_s
+end
+end
+end
+}
+}
