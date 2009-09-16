@@ -9,28 +9,29 @@ require 'world_boundaries.rb'
 
 class IndexController < ApplicationController
 
+  #
+  # generate rss - with country boundary respect if supplied
+  #
   def rss
-    @country = 'Iraq'
-    @country = params[:country] if params[:country]
-    @multipolygon = WorldBoundaries.polygon_country(@country)
-    @w,@e,@s,@n = WorldBoundaries.polygon_extent(@multipolygon)
-    synchronous = false
-    results = QuerySupport::query(@q,@s,@w,@n,@e,synchronous)
     @posts = []
-    results[:results].each do |result|
-      next if result.kind != Note::KIND_POST
-      if WorldBoundaries.polygon_inside?(@multipolygon,result.lon,result.lat)
-        @posts << result
+    @country = nil
+    @country = params[:country] if params[:country] && params[:country].length > 1
+    if @country
+      @multipolygon = WorldBoundaries.polygon_country(@country)
+      if @multipolygon
+        @w,@e,@s,@n = WorldBoundaries.polygon_extent(@multipolygon)
+        synchronous = false
+        results = QuerySupport::query(@q,@s,@w,@n,@e,synchronous)
+        results[:results].each do |result|
+          next if result.kind != Note::KIND_POST
+          if WorldBoundaries.polygon_inside?(@multipolygon,result.lon,result.lat)
+            @posts << result
+          end
+        end
       end
     end
     headers["Content-Type"] = "application/xml; charset=utf-8"
     render :layout => false
-  end
-
-  def test
-    x1,x2,y1,y2 = WorldBoundaries.extent('Iraq')
-    @testresult = WorldBoundaries.inside?('Iraq',100,100)
-    render :layout => nil
   end
 
   #
@@ -38,6 +39,15 @@ class IndexController < ApplicationController
   #
   def index
 
+    @country = nil
+    @country = params[:country] if params[:country] && params[:country].length > 1
+    if @country
+      @multipolygon = WorldBoundaries.polygon_country(@country)
+      if @multipolygon
+        params[:w],params[:e],params[:s],params[:n] = WorldBoundaries.polygon_extent(@multipolygon)
+      end
+      @map.countrycode = @country
+    end
 
     # strive to supply session state of previous question if any to the map for json refresh
     @map.question = nil
@@ -68,20 +78,42 @@ class IndexController < ApplicationController
     # preferentially pull user question and location of question; ignore session state
     @q = nil
     @q = session[:q] = params[:q].to_s if params[:q]
+
+    # always grab the explicit bounds if any - can be overloaded 
     @s = @w = @n = @e = 0.0
-	begin
-		@s = session[:s] = params[:s].to_f if params[:s]
-		@w = session[:w] = params[:w].to_f if params[:w]
-		@n = session[:n] = params[:n].to_f if params[:n]
-		@e = session[:e] = params[:e].to_f if params[:e]
-	rescue
-	end
+    begin
+      @s = session[:s] = params[:s].to_f if params[:s]
+      @w = session[:w] = params[:w].to_f if params[:w]
+      @n = session[:n] = params[:n].to_f if params[:n]
+      @e = session[:e] = params[:e].to_f if params[:e]
+    rescue
+    end
+
+    # allow explicit country code to set boundaries - overrides supplied bounds
+    @country = nil
+    @country = params[:country] if params[:country] && params[:country].length > 1
+    if @country
+      @multipolygon = WorldBoundaries.polygon_country(@country)
+      if @multipolygon
+        @w,@e,@s,@n = WorldBoundaries.polygon_extent(@multipolygon)
+      end
+    end
 
     # pull user search term if supplied
     synchronous = false
     synchronous = true if params[:synchronous] && params[:synchronous] ==true
     results = QuerySupport::query(@q,@s,@w,@n,@e,synchronous)
 
+    # finalize the culling
+    if @multipolygon
+      temp_results = []
+      results[:results].each do |result|
+        if WorldBoundaries.polygon_inside?(@multipolygon,result.lon,result.lat)
+          temp_results << result
+        end
+      end
+      results[:results] = temp_results
+    end
 
     render :json => results.to_json
   end
