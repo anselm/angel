@@ -17,12 +17,11 @@ Basically Make a spatially enabled database like so:
    createlang plpgsql angel
    psql -d angel -f /usr/local/share/postgis/lwpostgis.sql
    psql -d angel -f /usr/local/share/postgis/spatial_ref_sys.sql
-   # see : http://mappinghacks.com/data/
-   # wget http://mappinghacks.com/data/world_borders.zip
-   shp2pgsql -d boundaries_shp/TM_WORLD_BORDERS-0.2.shp world_boundaries angel > wb_dump.sql
-
-
-   psql angel < world_boundaries.sql 
+   wget http://mappinghacks.com/data/TM_WORLD_BORDERS-0.2.zip
+   unzip TM_WORLD_BORDERS-0.2.zip
+   shp2pgsql -E LATIN1 -d TM_WORLD_BORDERS-0.2.shp world_boundaries angel > wb_dump.sql
+   psql angel < wb_dump.sql
+   # you will want to do postgres grants on these tables to the angel owner
 
 2) There are a pile of gems that are required:
 
