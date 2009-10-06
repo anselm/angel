@@ -45,6 +45,7 @@ class Dynamapper
   attr_accessor :map_type
   attr_accessor :features
   attr_accessor :map_usercallback
+  attr_accessor :countrycode
 
   #
   # initialize()
@@ -60,7 +61,8 @@ class Dynamapper
     @zoom = args[:zoom] || 9 
     @map_type = "G_SATELLITE_MAP"
     @features = []
-	@map_usercallback = "map_user_initialize"
+    @map_usercallback = "map_user_initialize"
+    @countrycode = ""
   end
 
   #
@@ -739,7 +741,7 @@ function mapper_page_paint(blob) {
 function mapper_page_paint_request(recenter) {
 
 	if(map == null) return;
-	var url = "/json?";
+	var url = "/json?country=#{@countrycode}&";
 
 	// tack on the search phrase
 	var q = document.getElementById("q");
