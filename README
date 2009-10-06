@@ -10,6 +10,10 @@ You'll need the world borders in the database - see this url:
 
 http://blog.newsplore.com/2009/02/22/spincloud-labs-political-boundaries-overlay-in-google-maps-part-1/comment-page-1
 
+There are some gotchas - shp2pgsql requires UTf8 support enabled.  So if you are making it from the freebsd ports for example you need to do a 'make config' to enable that.  You may want to also make sure that postgres is built with GEOS - not sure if this is needdd however.
+
+Also the utf8 encoding is bizarre.  You may want to try encode as latin1.
+
 Basically Make a spatially enabled database like so:
 
    createuser -p  # name angel password angel
@@ -19,7 +23,7 @@ Basically Make a spatially enabled database like so:
    psql -d angel -f /usr/local/share/postgis/spatial_ref_sys.sql
    # see : http://mappinghacks.com/data/
    # wget http://mappinghacks.com/data/world_borders.zip
-   shp2pgsql -d boundaries_shp/TM_WORLD_BORDERS-0.2.shp world_boundaries angel > wb_dump.sql
+   shp2pgsql -W latin1 -d boundaries_shp/TM_WORLD_BORDERS-0.2.shp world_boundaries angel > wb_dump.sql
 
 
    psql angel < world_boundaries.sql 
