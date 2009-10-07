@@ -153,6 +153,13 @@ class QuerySupport
 
 		end
 
+		# for now - collect right away the actual parties indicated by the nicks
+		# TODO debatable if should be here
+		if restrict
+			q[:parties] = self.twitter_get_parties(q[:partynames])
+			#q[:friends] = self.twitter_get_friends(q[:parties])
+		end
+
 		# aggregate?
 		if synchronous
 			ActionController::Base.logger.info "Aggregating synchronously beginning now"
@@ -191,6 +198,7 @@ class QuerySupport
 		# if restricted around the named parties then explicitly get that set
 		# TODO this is different enough that it is arguable if we should have it in the same code block
 		# TODO not just twitter
+		# TODO we could just look at the parties
 		#
 		if restrict && q[:partynames] && q[:partynames].length
 			partyids = []

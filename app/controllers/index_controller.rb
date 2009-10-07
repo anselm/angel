@@ -23,8 +23,52 @@ class IndexController < ApplicationController
   # 9) allow subscribers to tag an entity to allow entity grouping
   # 10) allow subscribers to request an update on an entire set such as a tagged set
   #
+  #
+  # API
+  #
+  # 1) fetch recent activity of a person or persons; also adds them to my list of persons to watch
+  #		- mark these as 'asked for' by incrementing their count
+  #		- actually update them periodically
+  #		- can i ask for multiple people?
+  #		- ?
+  #
+  # /json?restrict=true&q=@anselm
+  #
+  #
 
-  def api_subscribe
+  def json
+
+	# accept a query phrase including persons, places and terms
+    @q = nil
+    @q = session[:q] = params[:q].to_s if params[:q]
+
+    # accept an explicit boundary { aside from any locations specified in the query }
+    @s = @w = @n = @e = 0.0
+    begin
+      @s = session[:s] = params[:s].to_f if params[:s]
+      @w = session[:w] = params[:w].to_f if params[:w]
+      @n = session[:n] = params[:n].to_f if params[:n]
+      @e = session[:e] = params[:e].to_f if params[:e]
+    rescue
+    end
+
+    # accept an explicit country code - this will override the location boundary supplied above
+    @country = nil
+    @country = params[:country] if params[:country] && params[:country].length > 1
+
+    # internal development test feature; test twitter aggregation
+    synchronous = false
+    synchronous = true if params[:synchronous] && params[:synchronous] == true
+
+    # internal development test feature; ignore friends of specified parties
+	restrict = false
+    restrict = true if params[:restrict] && params[:restrict] == true
+
+	# go ahead and query for the data requested
+    results = QuerySupport::query(@q,@s,@w,@n,@e,@country,restrict,synchronous)
+
+    render :json => results.to_json
+
   end
 
   #
@@ -39,6 +83,28 @@ class IndexController < ApplicationController
       @posts << result if result.kind == Note::KIND_POST
 	end
     headers["Content-Type"] = "application/xml; charset=utf-8"
+    render :layout => false
+  end
+
+  #
+  # below is a test for flash globe - merge in above or throw away TODO
+  #
+  def test2
+    # we'll return a selection of recent posts that can be used to update the globe 
+    @notes = Note.find(:all, :limit => 50, :order => "updated_at DESC", :conditions => { :kind => 'post' } );
+    # from those posts I'd like to also return the related users
+    @users = []
+    @notes.each do |note|
+      user = Note.find(:first,:conditions => { :id => note.owner_id, :kind => 'user' } )
+      if user
+        @users << user
+      end
+    end
+    # from those users I'd like to also add a set of related users so we can map worldwide relationships
+	#    @users.each do |user|
+	#       party.relation_add(Note::RELATION_FRIEND,1,party2.id)  
+	# end
+    @notes = Note.find(:all, :limit => 50, :order => "updated_at DESC" );
     render :layout => false
   end
 
@@ -75,68 +141,8 @@ class IndexController < ApplicationController
 
   end
 
-  #
-  # Our first pass at an API - handle place, person and subject queries
-  #
-  def json
-
-	# accept a query phrase including persons, places and terms
-    @q = nil
-    @q = session[:q] = params[:q].to_s if params[:q]
-
-    # accept an explicit boundary { aside from any locations specified in the query }
-    @s = @w = @n = @e = 0.0
-    begin
-      @s = session[:s] = params[:s].to_f if params[:s]
-      @w = session[:w] = params[:w].to_f if params[:w]
-      @n = session[:n] = params[:n].to_f if params[:n]
-      @e = session[:e] = params[:e].to_f if params[:e]
-    rescue
-    end
-
-    # accept an explicit country code - this will override the location boundary supplied above
-    @country = nil
-    @country = params[:country] if params[:country] && params[:country].length > 1
-
-    # internal development test feature; test twitter aggregation
-    synchronous = false
-    synchronous = true if params[:synchronous] && params[:synchronous] == true
-
-    # internal development test feature; ignore friends of specified parties
-	restrict = false
-    restrict = true if params[:restrict] && params[:restrict] == true
-
-	# go ahead and query for the data requested
-    results = QuerySupport::query(@q,@s,@w,@n,@e,@country,restrict,synchronous)
-
-    render :json => results.to_json
-
-  end
-
   def about
     render :layout => 'static'
-  end
-
-  #
-  # below is a test for flash globe - merge in above or throw away TODO
-  #
-  def test2
-    # we'll return a selection of recent posts that can be used to update the globe 
-    @notes = Note.find(:all, :limit => 50, :order => "updated_at DESC", :conditions => { :kind => 'post' } );
-    # from those posts I'd like to also return the related users
-    @users = []
-    @notes.each do |note|
-      user = Note.find(:first,:conditions => { :id => note.owner_id, :kind => 'user' } )
-      if user
-        @users << user
-      end
-    end
-    # from those users I'd like to also add a set of related users so we can map worldwide relationships
-	#    @users.each do |user|
-	#       party.relation_add(Note::RELATION_FRIEND,1,party2.id)  
-	# end
-    @notes = Note.find(:all, :limit => 50, :order => "updated_at DESC" );
-    render :layout => false
   end
 
 end
