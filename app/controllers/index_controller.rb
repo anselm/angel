@@ -10,64 +10,69 @@ require 'world_boundaries.rb'
 class IndexController < ApplicationController
 
   #
-  # generate rss - with country boundary respect if supplied
+  # api goals
+  #
+  # 1) allow subscribers to indicate a series of sources to follow
+  # 2) allow subscribers to fetch back posts of parties they are watching
+  # 3) allow subscribers to issue general queries such as person, place and terms
+  # 4) allow subscribers to upscore or downscore any entity
+  # 5) allow subscribers to indicate a matchmaking opportunity
+  # 6) allow subscribers to attach a note to a subject
+  # 7) allow subscribers to make new subjects
+  # 8) identify subscribers by a name and password
+  # 9) allow subscribers to tag an entity to allow entity grouping
+  # 10) allow subscribers to request an update on an entire set such as a tagged set
+  #
+
+  def api_subscribe
+  end
+
+  #
+  # test; fetch rss results on a specified country of posts only
   #
   def rss
     @posts = []
     @country = nil
     @country = params[:country] if params[:country] && params[:country].length > 1
-    if @country
-      @multipolygon = WorldBoundaries.polygon_country(@country)
-      if @multipolygon
-        @w,@e,@s,@n = WorldBoundaries.polygon_extent(@multipolygon)
-        synchronous = false
-        results = QuerySupport::query(@q,@s,@w,@n,@e,synchronous)
-        results[:results].each do |result|
-          next if result.kind != Note::KIND_POST
-          if WorldBoundaries.polygon_inside?(@multipolygon,result.lon,result.lat)
-            @posts << result
-          end
-        end
-      end
-    end
+	results = QuerySupport::query(@q,@s,@w,@n,@e,@country)
+	results[:results].each do |result|
+      @posts << result if result.kind == Note::KIND_POST
+	end
     headers["Content-Type"] = "application/xml; charset=utf-8"
     render :layout => false
   end
 
   #
-  # The client side is javascript so this does very litle
+  # The client side is javascript so this does very litle - it just kicks off the json callback
   #
   def index
 
-    @country = nil
-    @country = params[:country] if params[:country] && params[:country].length > 1
-    if @country
-      @multipolygon = WorldBoundaries.polygon_country(@country)
-      if @multipolygon
-        params[:w],params[:e],params[:s],params[:n] = WorldBoundaries.polygon_extent(@multipolygon)
-      end
-      @map.countrycode = @country
-    end
-
-    # strive to supply session state of previous question if any to the map for json refresh
+    # for the map - pass any query string down to the json layer so it can do dynamic query
     @map.question = nil
     @map.question = session[:q] = params[:q] if params[:q]
     @map.question = session[:q] if !params[:q]
-    # strive to supply a hint to the map regarding where to center 
+
+	# for the map - pass any location string down to the json layer as well
     @map.south = @map.west = @map.north = @map.east = 0.0
     begin
-	# attempt to fetch map location from parameters
-	@map.south    = session[:s] = params[:s].to_f if params[:s]
-	@map.west     = session[:w] = params[:w].to_f if params[:w]
-	@map.north    = session[:n] = params[:n].to_f if params[:n]
-	@map.east     = session[:e] = params[:e].to_f if params[:e]
-	# otherwise fetch them from session state if present (or set to nil)
-	@map.south    = session[:s].to_f if !params[:s]
-	@map.west     = session[:w].to_f if !params[:w]
-	@map.north    = session[:n].to_f if !params[:n]
-	@map.east     = session[:e].to_f if !params[:e]
+		# attempt to fetch map location from parameters
+		@map.south    = session[:s] = params[:s].to_f if params[:s]
+		@map.west     = session[:w] = params[:w].to_f if params[:w]
+		@map.north    = session[:n] = params[:n].to_f if params[:n]
+		@map.east     = session[:e] = params[:e].to_f if params[:e]
+		# otherwise fetch them from session state if present (or set to nil)
+		@map.south    = session[:s].to_f if !params[:s]
+		@map.west     = session[:w].to_f if !params[:w]
+		@map.north    = session[:n].to_f if !params[:n]
+		@map.east     = session[:e].to_f if !params[:e]
     rescue
     end
+
+	# for the map - try tp pass any explicit country request down to the json layer
+    @country = nil
+    @country = params[:country] if params[:country] && params[:country].length > 1
+	@map.countrycode = @country
+
   end
 
   #
@@ -75,11 +80,11 @@ class IndexController < ApplicationController
   #
   def json
 
-    # preferentially pull user question and location of question; ignore session state
+	# accept a query phrase including persons, places and terms
     @q = nil
     @q = session[:q] = params[:q].to_s if params[:q]
 
-    # always grab the explicit bounds if any - can be overloaded 
+    # accept an explicit boundary { aside from any locations specified in the query }
     @s = @w = @n = @e = 0.0
     begin
       @s = session[:s] = params[:s].to_f if params[:s]
@@ -89,33 +94,23 @@ class IndexController < ApplicationController
     rescue
     end
 
-    # allow explicit country code to set boundaries - overrides supplied bounds
+    # accept an explicit country code - this will override the location boundary supplied above
     @country = nil
     @country = params[:country] if params[:country] && params[:country].length > 1
-    if @country
-      @multipolygon = WorldBoundaries.polygon_country(@country)
-      if @multipolygon
-        @w,@e,@s,@n = WorldBoundaries.polygon_extent(@multipolygon)
-      end
-    end
 
-    # pull user search term if supplied
+    # internal development test feature; test twitter aggregation
     synchronous = false
-    synchronous = true if params[:synchronous] && params[:synchronous] ==true
-    results = QuerySupport::query(@q,@s,@w,@n,@e,synchronous)
+    synchronous = true if params[:synchronous] && params[:synchronous] == true
 
-    # finalize the culling
-    if @multipolygon
-      temp_results = []
-      results[:results].each do |result|
-        if WorldBoundaries.polygon_inside?(@multipolygon,result.lon,result.lat)
-          temp_results << result
-        end
-      end
-      results[:results] = temp_results
-    end
+    # internal development test feature; ignore friends of specified parties
+	restrict = false
+    restrict = true if params[:restrict] && params[:restrict] == true
+
+	# go ahead and query for the data requested
+    results = QuerySupport::query(@q,@s,@w,@n,@e,@country,restrict,synchronous)
 
     render :json => results.to_json
+
   end
 
   def about
