@@ -89,6 +89,7 @@ class TwitterSupport
 	def self.twitter_refresh_timeline(party)
 
 		twitter = self.twitter_start
+		provenance = "twitter"
 
 		if self.twitter_get_remaining_hits < 1
 			# TODO what should we do?
@@ -96,13 +97,11 @@ class TwitterSupport
 			return []
 		end
 
-		provenance = "twitter"
-
-		since_uuid = self.get_last_post(party,provenance)
-
 		# other options: max_id, #page, #since
 		results = []
-		list = twitter.user_timeline(:user_id=>partyid,:count=>200,:since_id=>since_uuid) 
+		since_id = self.get_last_post(party,provenance)
+		list = twitter.user_timeline(:user_id=>party.uuid,:count=>20,:since_id=>since_id)
+
 		list.each do |twit|
 			ActionController::Base.logger.info "timeline - got a message #{twit.text}"
 			results << self.save_post(party,
@@ -113,7 +112,14 @@ class TwitterSupport
 					:begins => Time.parse(twit.created_at)
 					)
 		end
+
 		return results
+	end
+
+	def self.twitter_get_timelines(parties)
+		parties.each do |party|
+			self.twitter_refresh_timeline(party)
+		end
 	end
 
 	##########################################################################################################

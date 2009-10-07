@@ -93,13 +93,13 @@ class TwitterSupport
       return ammended
   end
 
-  def self.attach_all_notes_to_all_urls
-    Note.find(:all, :conditions => { :kind => Note::KIND_POST } ).each do |note|
-      self.attach_note_to_urls(note)
-    end
-  end
+	def self.attach_all_notes_to_all_urls
+		Note.find(:all, :conditions => { :kind => Note::KIND_POST } ).each do |note|
+			self.attach_note_to_urls(note)
+		end
+	end
 
-  def self.attach_note_to_tags(note)
+	def self.attach_note_to_tags(note)
 
 			begin
 				tags = {}
@@ -113,7 +113,7 @@ class TwitterSupport
                         #note.title.scan(/#[a-zA-Z]+/).each do |tag|
                         #       note.relation_add(Note::RELATION_TAG,tag[1..-1])
                         #end
-  end
+	end
 
 	###########################################################################################
 	# encode url
@@ -191,7 +191,7 @@ class TwitterSupport
 	##########################################################################################################
 
 	def self.get_last_post(party,provenance)
-		last = Note.find(:last, :order => 'created_at',
+		last = Note.find(:last, :order => 'uuid',
 					:conditions => {
 						:kind => Note::KIND_POST,
 						:owner_id => party.id,
@@ -245,11 +245,14 @@ class TwitterSupport
 		fallback_rad = args[:fallback_rad]
 
 		# do we have a party like this already?
+		party = args[:party] if args[:party]
+		if !party
 		party = Note.find(:first, :conditions => { 
 						:provenance => provenance,
 						:uuid => uuid.to_s,
 						:kind => kind
 						 })
+		end
 
 		# always re geolocate the party
 		lat,lon,rad = Dynamapper.geolocate(location)
@@ -416,6 +419,7 @@ end
 =end
 
 	# get parties directly from twitter - later will switch to yql but this is good enough
+	# note that the twitter assigned id is not always the same as the screen name and the screen name can change
 	def self.twitter_get_parties(names_or_ids)
 		results = []
 		twitter = twitter_start

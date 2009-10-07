@@ -2,7 +2,7 @@ require 'net/http'
 require 'uri'
 require 'open-uri'
 require 'lib/query_support.rb'
-# require 'json/pure'
+require 'json/pure'
 #require 'json/add/rails'
 require 'note.rb'
 require 'world_boundaries.rb'
@@ -56,15 +56,16 @@ class IndexController < ApplicationController
     @country = nil
     @country = params[:country] if params[:country] && params[:country].length > 1
 
+    # internal development test feature; ignore friends of specified parties
+    restrict = false
+    restrict = true if params[:restrict] && params[:restrict] == "true"
+
     # internal development test feature; test twitter aggregation
     synchronous = false
-    synchronous = true if params[:synchronous] && params[:synchronous] == true
+    synchronous = true if params[:synchronous] && params[:synchronous] == "true"
+synchronous = true if restrict == true
 
-    # internal development test feature; ignore friends of specified parties
-	restrict = false
-    restrict = true if params[:restrict] && params[:restrict] == true
-
-	# go ahead and query for the data requested
+    # go ahead and query for the data requested
     results = QuerySupport::query(@q,@s,@w,@n,@e,@country,restrict,synchronous)
 
     render :json => results.to_json

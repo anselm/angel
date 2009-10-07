@@ -120,8 +120,13 @@ class QuerySupport
 		s,w,n,e = nil
 		words = []
 
+		# build search query
+		conditions = []
+		condition_arguments = []
+
 		# allow location query if not restricted to a specific set of users
 		if !restrict
+			ActionController::Base.logger.info "Query: unrestricted query looking for location **********************************"
 
 			# try to figure out a geographic location for the query based on all the hints we got
 			QuerySupport::query_locate(q,country,map_s,map_w,map_n,map_e)
@@ -155,21 +160,21 @@ class QuerySupport
 
 		# for now - collect right away the actual parties indicated by the nicks
 		# TODO debatable if should be here
-		if restrict
-			q[:parties] = self.twitter_get_parties(q[:partynames])
-			#q[:friends] = self.twitter_get_friends(q[:parties])
+		if restrict && synchronous
+			ActionController::Base.logger.info "Query: restricted query updating parties **********************************"
+			ActionController::Base.logger.info "Query: restricted query updating parties #{q[:partynames]}"
+			q[:parties] = TwitterSupport::twitter_get_parties(q[:partynames])
+			#q[:friends] = TwitterSupport::twitter_get_friends(q[:parties])
+			TwitterSupport::twitter_get_timelines(q[:parties])
 		end
-
+ 
 		# aggregate?
-		if synchronous
+		if !restrict && synchronous
+			ActionController::Base.logger.info "Query: synchronous query updating parties **********************************"
 			ActionController::Base.logger.info "Aggregating synchronously beginning now"
 			TwitterSupport::aggregate_memoize(q,true)
 			ActionController::Base.logger.info "Aggregating synchronously done now"
 		end
-
-		# build search query
-		conditions = []
-		condition_arguments = []
 
 		# if there are search terms then add them to the search boundary
 		# are we totally cleaning words to disallow garbage? TODO
@@ -201,15 +206,24 @@ class QuerySupport
 		# TODO we could just look at the parties
 		#
 		if restrict && q[:partynames] && q[:partynames].length
+			ActionController::Base.logger.info "Query: restricted traffic fetch of party data from db *********************************"
 			partyids = []
-			q[:partynames].each do |name_or_id|
-				party = Note.find(:first, :conditions => { 
-						:provenance => "twitter",
-						:uuid => name_or_id,
-						:kind => Note::KIND_USER
-						 })
-				next if !party
-				partyids << party.id
+			if q[:parties] && q[:parties].length > 0
+				q[:parties].each do |party|
+					partyids << party.id
+				end
+			else
+				q[:partynames].each do |name|
+					ActionController::Base.logger.info "Query: looking for #{name}"
+					party = Note.find(:first, :conditions => { 
+							:provenance => "twitter",
+							:title => name,
+							:kind => Note::KIND_USER
+							 })
+					next if !party
+					ActionController::Base.logger.info "Query: found #{name_or_id}"
+					partyids << party.id
+				end
 			end
 			if partyids.length > 0
 				conditions << "owner_id = ?"
@@ -220,6 +234,7 @@ class QuerySupport
 		# TODO pagination
 
 		# perform our query
+		ActionController::Base.logger.info "Query: performing query ************************ *********************************"
 		ActionController::Base.logger.info "ABOUT TO QUERY #{conditions} and #{condition_arguments.join(' *** ' ) } "
 		conditions = [ conditions.join(' AND ') ] + condition_arguments
 		Note.all(:conditions => conditions , :limit => 255, :order => "id desc" ).each do |note|
@@ -236,6 +251,7 @@ class QuerySupport
 		#
 
 		if !restrict
+			ActionController::Base.logger.info "Query: injecting people ************************ *********************************"
 			people = {}
 			results.each do |post|
 				person = Note.find(:first,:conditions => { :id => post.owner_id } )
@@ -257,6 +273,7 @@ class QuerySupport
 		#
 
 		if !restrict
+			ActionController::Base.logger.info "Query: injecting urls ************************ *********************************"
 			entities = {}
 			results.each do |post|
 				next if post.kind != Note::KIND_POST
@@ -285,6 +302,7 @@ class QuerySupport
 		# for general cases we want to carving against a multipolygon in some cases
 		#
 		if !restrict
+			ActionController::Base.logger.info "Query: injecting multipolygons ******************** *********************************"
 			multipolygon = q[:multipolygon]
 			if multipolygon
 				ActionController::Base.logger.info "Query: got rough results #{results} #{results_length}"
@@ -292,8 +310,9 @@ class QuerySupport
 				results_length = 0
 				results.each do |result|
 					if WorldBoundaries.polygon_inside?(multipolygon,result.lon,result.lat)
-					temp_results << result
-					results_length = results_length + 1
+						temp_results << result
+						results_length = results_length + 1
+					end
 				end
 				results = temp_results
 			end
