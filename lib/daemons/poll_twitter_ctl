@@ -17,5 +17,5 @@ options = YAML.load(
   )).result).with_symbols!
 options[:dir_mode] = options[:dir_mode].to_sym
 
-Daemons.run File.dirname(__FILE__) + '/twitter_aggregate.rb', options
+Daemons.run File.dirname(__FILE__) + '/poll_twitter.rb', options
 

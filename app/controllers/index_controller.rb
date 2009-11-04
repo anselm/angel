@@ -52,6 +52,16 @@ class IndexController < ApplicationController
     rescue
     end
 
+# a hack: we don't deal with datelines very well TODO improve
+# temporary solution is that if we are on the west side then extend west, else extend east
+if @w > @e
+  if @w > 0
+    @w = @w - 360
+  else
+    @e = @e + 360
+  end
+end
+
     # accept an explicit country code - this will override the location boundary supplied above
     @country = nil
     @country = params[:country] if params[:country] && params[:country].length > 1

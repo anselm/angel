@@ -765,11 +765,26 @@ function mapper_page_paint_request(recenter) {
 	var e = ne.lng();
 	url = url + "s="+s+"&w="+w+"&n="+n+"&e="+e;
 
+        // spinner
+        var spinner = document.getElementById('spinner');
+        if(!spinner) {
+          spinner = document.createElement('img');
+          spinner.src = "/spinner.gif";
+          spinner.id = "spinner";
+          spinner.style.position = "absolute";
+          spinner.style.left = "10px";
+          spinner.style.top = "100px";
+          spinner.style.display = "block";
+          document.body.appendChild(spinner);
+        }
+        spinner.style.display = "block";
+
 	new Ajax.Request(url, {
 		method:'get',
 		requestHeaders: {Accept: 'application/json'},
 		onSuccess: function(transport) {
-			var blob = transport.responseText.evalJSON();
+			spinner.style.display = "none";
+                        var blob = transport.responseText.evalJSON();
 			if( blob ) {
 				mapper_page_paint(blob);
 				if( recenter == true ) {
