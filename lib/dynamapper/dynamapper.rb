@@ -441,6 +441,8 @@ function mapper_hide_stale() {
 		var feature = mapper_features[key];
 		if(feature != null && feature.stale == true) {
 			feature.hide(); // removeOverlay();
+		} else if( feature != null ) {
+			feature.show();
 		}
 	}
 }
