@@ -21,20 +21,12 @@ Basically Make a spatially enabled database like so:
    createlang plpgsql angel
    psql -d angel -f /usr/local/share/postgis/lwpostgis.sql
    psql -d angel -f /usr/local/share/postgis/spatial_ref_sys.sql
-<<<<<<< HEAD:README
-   # see : http://mappinghacks.com/data/
-   # wget http://mappinghacks.com/data/world_borders.zip
-   shp2pgsql -W latin1 -d boundaries_shp/TM_WORLD_BORDERS-0.2.shp world_boundaries angel > wb_dump.sql
 
-
-   psql angel < world_boundaries.sql 
-=======
    wget http://mappinghacks.com/data/TM_WORLD_BORDERS-0.2.zip
    unzip TM_WORLD_BORDERS-0.2.zip
    shp2pgsql -E LATIN1 -d TM_WORLD_BORDERS-0.2.shp world_boundaries angel > wb_dump.sql
    psql angel < wb_dump.sql
    # you will want to do postgres grants on these tables to the angel owner
->>>>>>> e09c3a6f61ff56ebe999aa0a32cd3860fdd27f78:README
 
 2) There are a pile of gems that are required:
 
@@ -55,3 +47,4 @@ Basically Make a spatially enabled database like so:
 
 6) type "script/server start" to run the application.  it will appear on port 80 and you can use a web browser to see it.
 
+7) Use compass to rebuild the css
