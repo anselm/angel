@@ -637,17 +637,17 @@ function mapper_page_paint_markers(blob) {
 
 function mapper_page_paint_text(blob) {
 
-        // a list to draw text to
+        // draw to these text widgets explicitly for now 
         var people_box = document.getElementById("people_box");
         var posts_box = document.getElementById("posts_box");
         var urls_box = document.getElementById("urls_box");
-        if ( people_box.hasChildNodes() ) {
+        if ( people_box != null && people_box.hasChildNodes() ) {
                 while ( people_box.childNodes.length >= 1 ) { people_box.removeChild( people_box.firstChild ); }
         }
-        if ( posts_box.hasChildNodes() ) {
+        if ( posts_box != null && posts_box.hasChildNodes() ) {
                 while ( posts_box.childNodes.length >= 1 ) { posts_box.removeChild( posts_box.firstChild ); }
         }
-        if ( urls_box.hasChildNodes() ) {
+        if ( urls_box != null && urls_box.hasChildNodes() ) {
                 while ( urls_box.childNodes.length >= 1 ) { urls_box.removeChild( urls_box.firstChild ); }
         }
 
@@ -692,17 +692,17 @@ function mapper_page_paint_text(blob) {
                 var node = document.createElement('li');
                 if(node) {
 
-                        if(kind == "KIND_URL") {
+                        if(kind == "KIND_URL" && urls_box != null) {
                                 node.innerHTML = "<a href='"+title+"'>"+title+"</a>";
                                 urls_box.appendChild(node);
                                 count_url++;
                         }
-                        if(kind == "KIND_USER") {
+                        if(kind == "KIND_USER" && people_box != null) {
                                 node.innerHTML = "<a href='http://twitter.com/"+title+"'>"+title+"</a>";
                                 people_box.appendChild(node);
                                 count_user++;
                         }
-                        if(kind == "KIND_POST") {
+                        if(kind == "KIND_POST" && posts_box != null) {
                                 node.innerHTML = mapper_make_links_clickable(title,ownername);
                                 posts_box.appendChild(node);
                                 count_post++;

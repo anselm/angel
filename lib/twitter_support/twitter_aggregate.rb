@@ -13,13 +13,12 @@
 #
 
 require 'lib/twitter_support/twitter_base.rb'
-require 'lib/twitter_support/twitter_collect.rb'
 require 'lib/twitter_support/twitter_reap.rb'
 
 class TwitterSupport
 
 	#
-	# TODO migrate the controller query parse logic down here
+	# Do a fairly aggressive aggregation of a set of parties and all their friends - SLOW!
 	#
 	def self.aggregate(q)
 
@@ -38,7 +37,7 @@ class TwitterSupport
 		q[:friends] = self.twitter_get_friends(q[:parties])
 		# q[:acquaintances] = self.twitter_get_friends(q[:friends])  # too expensive 
 
-		# pull fresh data. use different strategies based on what we got from user
+		# pull fresh data. we have a variety of strategies we can use - hardcoded to yql for now
 		if q[:parties].length > 0
 			# if user supplied people then try one of these strategies
 			strategy = "friends_yql"

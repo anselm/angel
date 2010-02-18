@@ -24,21 +24,10 @@ class IndexController < ApplicationController
   # 10) allow subscribers to request an update on an entire set such as a tagged set
   #
   #
-  # API
-  #
-  # 1) fetch recent activity of a person or persons; also adds them to my list of persons to watch
-  #		- mark these as 'asked for' by incrementing their count
-  #		- actually update them periodically
-  #		- can i ask for multiple people?
-  #		- ?
-  #
-  # /json?restrict=true&q=@anselm
-  #
-  #
 
   def json
 
-	# accept a query phrase including persons, places and terms
+    # accept a query phrase including persons, places and terms
     @q = nil
     @q = session[:q] = params[:q].to_s if params[:q]
 
@@ -52,15 +41,31 @@ class IndexController < ApplicationController
     rescue
     end
 
-# a hack: we don't deal with datelines very well TODO improve
-# temporary solution is that if we are on the west side then extend west, else extend east
-if @w > @e
-  if @w > 0
-    @w = @w - 360
-  else
-    @e = @e + 360
-  end
-end
+    # for the nov 18 2009 ardemo for dorkbot i needed to return points near user so accept a radius and location
+    @rad = nil
+    @lon = 0
+    @lat = 0
+    begin
+      @rad = params[:rad].to_f if params[:rad]
+      @lon = params[:lon].to_f if params[:lon]
+      @lat = params[:lat].to_f if params[:lat]
+      if @rad != nil && @rad > 0.0
+        @s = @lat - @rad
+        @n = @lat + @rad
+        @w = @lon - @rad
+        @e = @lon + @rad
+      end
+    end
+
+    # a hack: we don't deal with datelines very well TODO improve
+    # temporary solution is that if we are on the west side then extend west, else extend east
+    if @w > @e
+      if @w > 0
+        @w = @w - 360
+      else
+        @e = @e + 360
+      end
+    end
 
     # accept an explicit country code - this will override the location boundary supplied above
     @country = nil
@@ -73,10 +78,25 @@ end
     # internal development test feature; test twitter aggregation
     synchronous = false
     synchronous = true if params[:synchronous] && params[:synchronous] == "true"
-synchronous = true if restrict == true
+    synchronous = true if restrict == true
+
+    # internal development test feature; do not get urls
+    inject = true
+    inject = false if params[:noinject] && params[:noinject] == "true"
 
     # go ahead and query for the data requested
-    results = QuerySupport::query(@q,@s,@w,@n,@e,@country,restrict,synchronous)
+    results = QuerySupport::query(@q,@s,@w,@n,@e,@country,restrict,synchronous,inject)
+
+    # for the nov 18 ardemo for dorkbot i needed to distance sort the points and cull them so i don't crash the iphone
+    # abuse the radius field for this
+    if @rad != nil && @rad > 0.0
+      r = results[:results]
+      r.each { |note| note.rad = (@lat-note.lat)*(@lat-note.lat)+(@lon-note.lon)*(@lon-note.lon) }
+      r.sort! { |a,b| a.rad <=> b.rad }
+      r = r[0...49]
+      r.each { |note| ActionController::Base.logger.info "*** looking at #{note.title} at #{note.lat} and #{note.lon} and #{note.rad} " }
+      results[:results] = r
+    end
 
     render :json => results.to_json
 
@@ -129,26 +149,26 @@ synchronous = true if restrict == true
     @map.question = session[:q] = params[:q] if params[:q]
     @map.question = session[:q] if !params[:q]
 
-	# for the map - pass any location string down to the json layer as well
+    # for the map - pass any location string down to the json layer as well
     @map.south = @map.west = @map.north = @map.east = 0.0
     begin
-		# attempt to fetch map location from parameters
-		@map.south    = session[:s] = params[:s].to_f if params[:s]
-		@map.west     = session[:w] = params[:w].to_f if params[:w]
-		@map.north    = session[:n] = params[:n].to_f if params[:n]
-		@map.east     = session[:e] = params[:e].to_f if params[:e]
-		# otherwise fetch them from session state if present (or set to nil)
-		@map.south    = session[:s].to_f if !params[:s]
-		@map.west     = session[:w].to_f if !params[:w]
-		@map.north    = session[:n].to_f if !params[:n]
-		@map.east     = session[:e].to_f if !params[:e]
+	# attempt to fetch map location from parameters
+	@map.south    = session[:s] = params[:s].to_f if params[:s]
+	@map.west     = session[:w] = params[:w].to_f if params[:w]
+	@map.north    = session[:n] = params[:n].to_f if params[:n]
+	@map.east     = session[:e] = params[:e].to_f if params[:e]
+	# otherwise fetch them from session state if present (or set to nil)
+	@map.south    = session[:s].to_f if !params[:s]
+	@map.west     = session[:w].to_f if !params[:w]
+	@map.north    = session[:n].to_f if !params[:n]
+	@map.east     = session[:e].to_f if !params[:e]
     rescue
     end
 
-	# for the map - try tp pass any explicit country request down to the json layer
+    # for the map - try tp pass any explicit country request down to the json layer
     @country = nil
     @country = params[:country] if params[:country] && params[:country].length > 1
-	@map.countrycode = @country
+    @map.countrycode = @country
 
   end
 

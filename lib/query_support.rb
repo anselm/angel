@@ -113,10 +113,18 @@ class QuerySupport
 		return q
 	end
 
-	def self.query(question,map_s,map_w,map_n,map_e,country=nil,restrict=false,synchronous=false)
+	# build an sql statement for the query
+	# also may call the aggregator
+	def self.query(question,map_s,map_w,map_n,map_e,country=nil,restrict=false,synchronous=false,inject=true)
 
 		# tear apart the query and get back a nicely digested parsed version of it
 		q = QuerySupport::query_parse(question)
+		q[:restrict] = restrict
+		q[:synchronous] = synchronous
+		q[:log] = [ "Query Started" ]
+		q[:log] << "Restricted? #{restrict}"
+		q[:log] << "Synchronous? #{synchronous}"
+		q[:log] << "Inject? #{inject}"
 		s,w,n,e = nil
 		words = []
 
@@ -124,7 +132,7 @@ class QuerySupport
 		conditions = []
 		condition_arguments = []
 
-		# allow location query if not restricted to a specific set of users
+		# allow location query into sql statement if not restricted to a specific set of users - otherwise ignore location
 		if !restrict
 			ActionController::Base.logger.info "Query: unrestricted query looking for location **********************************"
 
@@ -155,25 +163,32 @@ class QuerySupport
 			# terms?
 			words = q[:words]
 			ActionController::Base.logger.info "Query: now looking for: #{words} at location #{s} #{w} #{n} #{e}"
+			q[:log] << "Query: now looking for: #{words} at location #{s} #{w} #{n} #{e}"
 
 		end
 
-		# for now - collect right away the actual parties indicated by the nicks
+		# for now - collect right away the actual parties indicated by the nicks - if restricted to those nicks
 		# TODO debatable if should be here
 		if restrict && synchronous
 			ActionController::Base.logger.info "Query: restricted query updating parties **********************************"
 			ActionController::Base.logger.info "Query: restricted query updating parties #{q[:partynames]}"
+			q[:log] << "Query: restricted query updating parties #{q[:partynames]}"
+			q[:log] << "Aggregating synchronously beginning now #{Time.now}"
 			q[:parties] = TwitterSupport::twitter_get_parties(q[:partynames])
 			#q[:friends] = TwitterSupport::twitter_get_friends(q[:parties])
 			TwitterSupport::twitter_get_timelines(q[:parties])
+			q[:log] << "Aggregating synchronously done now #{Time.now}"
 		end
  
 		# aggregate?
+		# TODO the above code is totally mutually exclusive with this code and it would be cleaner if above code was inside aggregate_memoize
 		if !restrict && synchronous
 			ActionController::Base.logger.info "Query: synchronous query updating parties **********************************"
-			ActionController::Base.logger.info "Aggregating synchronously beginning now"
+			ActionController::Base.logger.info "Aggregating synchronously beginning now #{Time.now}"
+			q[:log] << "Aggregating synchronously beginning now #{Time.now}"
 			TwitterSupport::aggregate_memoize(q,true)
-			ActionController::Base.logger.info "Aggregating synchronously done now"
+			ActionController::Base.logger.info "Aggregating synchronously done now #{Time.now}"
+			q[:log] << "Aggregating synchronously done now #{Time.now}"
 		end
 
 		# if there are search terms then add them to the search boundary
@@ -192,12 +207,6 @@ class QuerySupport
 			conditions << "kind = ?"
 			condition_arguments << Note::KIND_POST
 		end
-
-		#
-		# collect a big old pile of posts
-		#
-		results_length = 0
-		results = []
 
 		#
 		# if restricted around the named parties then explicitly get that set
@@ -231,17 +240,24 @@ class QuerySupport
 			end
 		end
 
+		#
+		# collect a big old pile of posts
 		# TODO pagination
+		#
+		conditions = [ conditions.join(' AND ') ] + condition_arguments
+		results_length = 0
+		results = []
 
 		# perform our query
 		ActionController::Base.logger.info "Query: performing query ************************ *********************************"
 		ActionController::Base.logger.info "ABOUT TO QUERY #{conditions} and #{condition_arguments.join(' *** ' ) } "
-		conditions = [ conditions.join(' AND ') ] + condition_arguments
+		q[:log] << "ABOUT TO QUERY #{conditions} and #{condition_arguments.join(' *** ' ) } "
 		Note.all(:conditions => conditions , :limit => 255, :order => "id desc" ).each do |note|
 			results << note
 			results_length = results_length + 1
 		end
 		ActionController::Base.logger.info "GOT #{results_length} posts "
+		q[:log] << "GOT #{results_length} posts "
 
 		# INJECT PEOPLE?
 		#
@@ -272,7 +288,7 @@ class QuerySupport
 		# TODO should i promote urls and like concepts to be first class objects? [ probably ]
 		#
 
-		if !restrict
+		if !restrict && inject
 			ActionController::Base.logger.info "Query: injecting urls ************************ *********************************"
 			entities = {}
 			results.each do |post|
@@ -301,6 +317,7 @@ class QuerySupport
 		#
 		# for general cases we want to carving against a multipolygon in some cases
 		#
+
 		if !restrict
 			ActionController::Base.logger.info "Query: injecting multipolygons ******************** *********************************"
 			multipolygon = q[:multipolygon]
@@ -319,6 +336,7 @@ class QuerySupport
 		end
 
 		# return results as well as the rest of the query work
+
 		ActionController::Base.logger.info "Query: got final results #{results} #{results_length}"
 		q[:results_length] = results_length
 		q[:results] = results
