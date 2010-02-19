@@ -29,110 +29,12 @@ require 'world_boundaries.rb'
 class IndexController < ApplicationController
 
   #
-  # query support
-  # this is an internal convenience utility method
-  # query parameters come in via http parameters
-  # fetch the parameters and perform the query... 
-  #
-  # parameters
-  #
-  # q = persons, terms and location as in "@anselm pizza near san francisco"
-  # s,w,n,e = location bounds
-  # rad,lat,lon = another way of specifying bounds
-  # country = another way of restricting bounds
-  # restrict = do not return information about friends or friends of friends
-  # synchronous = call aggregator right away - very slow
-  # noinject = normally the system adds information about related urls which it has expanded for convenience - this can be disabled
-  # utc = last time stamp fetched ( so we can avoid shipping stuff older than this )
-  # offset = offset for pagination
-  # count = how many to fetch
-
-  def perform_query 
-
-    # accept a query phrase including persons, places and terms
-    @q = nil
-    @q = session[:q] = params[:q].to_s if params[:q]
-
-    # accept an explicit boundary { aside from any locations specified in the query }
-    @s = @w = @n = @e = 0.0
-    begin
-      @s = session[:s] = params[:s].to_f if params[:s]
-      @w = session[:w] = params[:w].to_f if params[:w]
-      @n = session[:n] = params[:n].to_f if params[:n]
-      @e = session[:e] = params[:e].to_f if params[:e]
-    rescue
-    end
-
-    # for the nov 18 2009 ardemo for dorkbot i needed to return points near user so accept a radius and location
-    @rad = nil
-    @lon = 0
-    @lat = 0
-    begin
-      @rad = params[:rad].to_f if params[:rad]
-      @lon = params[:lon].to_f if params[:lon]
-      @lat = params[:lat].to_f if params[:lat]
-      if @rad != nil && @rad > 0.0
-        @s = @lat - @rad
-        @n = @lat + @rad
-        @w = @lon - @rad
-        @e = @lon + @rad
-      end
-    end
-
-    # a hack: we don't deal with datelines very well TODO improve
-    # temporary solution is that if we are on the west side then extend west, else extend east
-    if @w > @e
-      if @w > 0
-        @w = @w - 360
-      else
-        @e = @e + 360
-      end
-    end
-
-    # accept an explicit country code - this will override the location boundary supplied above
-    @country = nil
-    @country = params[:country] if params[:country] && params[:country].length > 1
-
-    # internal development test feature; ignore friends of specified parties
-    @restrict = false
-    @restrict = true if params[:restrict] && params[:restrict] == "true"
-
-    # internal development test feature; test twitter aggregation
-    @synchronous = false
-    @synchronous = true if params[:synchronous] && params[:synchronous] == "true"
-    @synchronous = true if @restrict == true
-
-    # internal development test feature; do not get urls
-    @inject = true
-    @inject = false if params[:noinject] && params[:noinject] == "true"
-
-    # go ahead and query for the data requested
-    @results = QuerySupport::query(@q,@s,@w,@n,@e,@country,@restrict,@synchronous,@inject,params[:utc],params[:offset],params[:count])
-
-    # for the nov 18 ardemo for dorkbot i needed to distance sort the points and cull them so i don't crash the iphone
-    # abuse the radius field for this
-    if @rad != nil && @rad > 0.0
-      r = @results[:results]
-      r.each { |note| note.rad = (@lat-note.lat)*(@lat-note.lat)+(@lon-note.lon)*(@lon-note.lon) }
-      r.sort! { |a,b| a.rad <=> b.rad }
-      r = r[0...49]
-      r.each { |note| ActionController::Base.logger.info "*** looking at #{note.title} at #{note.lat} and #{note.lon} and #{note.rad} " }
-      @results[:results] = r
-    end
-
-    return @results
-
-  end
-
-  #
   # IPHONE VIEW
   # a compact view suitable for sending state to the iphone
   #
 
   def compress
-
-    results = perform_query
-
+	results = QuerySupport::query(params,session)
   end
 
   #
@@ -140,11 +42,8 @@ class IndexController < ApplicationController
   #
 
   def json
-
-    results = perform_query
-
+	results = QuerySupport::query(params,session)
     render :json => results.to_json
-
   end
 
   #
@@ -154,9 +53,7 @@ class IndexController < ApplicationController
   #
   def rss
     @posts = []
-    @country = nil
-    @country = params[:country] if params[:country] && params[:country].length > 1
-	results = QuerySupport::query(@q,@s,@w,@n,@e,@country)
+	results = QuerySupport::query(params)
 	results[:results].each do |result|
       @posts << result if result.kind == Note::KIND_POST
 	end
@@ -194,6 +91,7 @@ class IndexController < ApplicationController
   # The client side is javascript so this does very litle - it just kicks off the json callback
   # We do look at some persistent state information for where the map is centered... but thats about it.
   # The rest is done by a json callback
+  # TODO it would be nicer if the javascript was constant, not dynamic.
   #
   def index
 

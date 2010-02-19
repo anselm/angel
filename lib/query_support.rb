@@ -4,7 +4,7 @@ require 'lib/twitter_support/twitter_aggregate.rb'
 
 ############################################################################################
 #
-# Query parsing and handling
+# Utility to pick apart query parameters
 #
 # What we do here:
 #  1) tear apart ordinary queries and return database results
@@ -112,63 +112,149 @@ class QuerySupport
 
 		return q
 	end
+	
+	#
+	# INJECT URLS?
+	#
+	# for general cases we also have a specific interest in 'entities' such as hashtags, urls, places and clusters
+	# here i am injecting 'fake' entities into the stream for now.
+	# later the thought is to promote some of the current edges to be first class entities
+	# annoyingly since these are not real notes they do not have unique ids.
+	# TODO should i promote urls and like concepts to be first class objects? [ probably ]
+	#
+	def self.inject_urls(results)
+		ActionController::Base.logger.info "Query: injecting urls ************************ *********************************"
+		entities = {}
+		results.each do |post|
+			next if post.kind != Note::KIND_POST
+			post.relations_all(Note::RELATION_URL).each do |relation|
+				ActionController::Base.logger.info "Query: got url results #{relation.kind} #{relation.value}"
+				url = relation.value
+				next if entities[url]
+				note = Note.new
+				note.title = relation.value
+				note.id = post.id * 1000000 + relation.id  # TODO such a hack ugh.
+				note.lat = post.lat
+				note.lon = post.lon
+				note.owner_id = post.owner_id
+				note.kind = Note::KIND_URL
+				entities[url] = note
+			end
+		end
+		entities.each do |key,value|
+			results << value
+			results_length = results_length + 1
+		end
+	end
 
-	# build an sql statement for the query
-	# also may call the aggregator
-	def self.query(question,map_s,map_w,map_n,map_e,country=nil,restrict=false,synchronous=false,inject=true)
+	def self.query(params,session=[])
+
+		question = nil
+		country = nil
+		restrict = false
+		synchronous = false
+		inject = true
+		offset = 0
+		length = 100
+		utc = 0
+		s = w = n = e = 0.0
+		rad = nil
+		lon = 0.0
+		lat = 0.0
+		sort = false
+
+		# get query phrase
+		question = session[:q] = params[:q].to_s if params[:q]
+
+		# accept an explicit country code - this will override the location boundary supplied above
+		country = params[:country] if params[:country] && params[:country].length > 1
+
+		# internal development test feature; ignore friends of specified parties
+		restrict = true if params[:restrict] && params[:restrict] == "true"
+
+		# internal development test feature; test twitter aggregation
+		synchronous = true if params[:synchronous] && params[:synchronous] == "true"
+
+		# internal development test feature; do not get urls
+		inject = false if params[:noinject] && params[:noinject] == "true"
+
+		# pagination
+		offset = params[:offset].to_i if params[:offset] && params[:offset].length > 0
+		length = params[:length].to_i if params[:length] && params[:length].length > 0
+
+		# last time fetched key
+		utc = params[:utc].to_i if params[:utc] && params[:utc].length > 0
+
+		# bounds
+		s = session[:s] = params[:s].to_f if params[:s]
+		w = session[:w] = params[:w].to_f if params[:w]
+		n = session[:n] = params[:n].to_f if params[:n]
+		e = session[:e] = params[:e].to_f if params[:e]
+
+		# get bounds optional approach
+		rad = params[:rad].to_f if params[:rad]
+		lon = params[:lon].to_f if params[:lon]
+		lat = params[:lat].to_f if params[:lat]
+		if rad != nil && rad > 0.0 && lon != 0 && lat != 0
+			s = lat - rad
+			n = lat + rad
+			w = lon - rad
+			e = lon + rad
+			sort = true
+		end
+
+		# hack - deal with datelines - improve later TODO
+		if w > e
+			if w > 0
+				w = w - 360
+			else
+				e = e + 360
+			end
+		end
 
 		#
-		# tear apart the query and get back a nicely digested parsed version of it
+		# settle on a final geographic location based on all hints
+		#
+
+		QuerySupport::query_locate(q,country,s,w,n,e)
+		s,w,n,e = q[:s],q[:w],q[:n],q[:e]
+
+		#
+		# store arguments
 		#
 
 		q = QuerySupport::query_parse(question)
 		q[:restrict] = restrict
 		q[:synchronous] = synchronous
+		q[:country] = country
+		q[:inject] = inject
+		q[:offset] = offset
+		q[:length] = length
+		q[:utc] = utc
 		q[:log] = [ "Query Started" ]
-		q[:log] << "Restricted? #{restrict}"
-		q[:log] << "Synchronous? #{synchronous}"
-		q[:log] << "Inject? #{inject}"
-		s,w,n,e = nil
-		words = []
 
 		#
-		# start to build sql search query
+		# build sql statement
 		#
 
 		conditions = []
 		condition_arguments = []
 
-		#
-		# geo constrain query
-		#
-
-		if true
-			ActionController::Base.logger.info "Query: unrestricted query looking for location **********************************"
-
-			# try to figure out a geographic location for the query based on all the hints we got
-			QuerySupport::query_locate(q,country,map_s,map_w,map_n,map_e)
-
-			# location?
-			s,w,n,e = q[:s],q[:w],q[:n],q[:e]
-
-			# also add lat long constraints
-			# TODO deal with wrap around the planet
-			if ( s < 0 || s > 0 || w < 0 || w > 0 || n > 0 || n < 0 || e < 0 || e > 0 )
-				conditions << "lat >= ? AND lat <= ? AND lon >= ? AND lon <= ?"
-				condition_arguments << s;
-				condition_arguments << n;
-				condition_arguments << w;
-				condition_arguments << e;
-			end
+		# restrict query by geography?
+		if ( s != 0 || n != 0 || w != 0 || e != 0 ) 
+			conditions << "lat >= ? AND lat <= ? AND lon >= ? AND lon <= ?"
+			condition_arguments << s;
+			condition_arguments << n;
+			condition_arguments << w;
+			condition_arguments << e;
+		end
 		
-			# always disallow features with 0,0 as a location
-			# TODO this fails... it still includes features that are at 0,0!
-
-			if true
-				conditions << "lat <> ? AND lon <> ?"
-				condition_arguments << 0
-				condition_arguments << 0
-			end
+		# always disallow features with 0,0 as a location
+		# TODO this fails... it still includes features that are at 0,0!
+		if true
+			conditions << "lat <> ? AND lon <> ?"
+			condition_arguments << 0
+			condition_arguments << 0
 		end
 
 		#
@@ -177,15 +263,13 @@ class QuerySupport
 		#
 	
 		if q[:words] && q[:words].length > 0
-
 			words = q[:words]
-			ActionController::Base.logger.info "Query: now looking for: #{words} at location #{s} #{w} #{n} #{e}"
-			q[:log] << "Query: now looking for: #{words} at location #{s} #{w} #{n} #{e}"
-
 			conditions << "description @@ to_tsquery(?)"
 			condition_arguments << words.join('&')
 			conditions << "title @@ to_tsquery(?)"
 			condition_arguments << words.join('&')
+			q[:log] << "Query: now looking for: #{words} at location #{s} #{w} #{n} #{e}"
+			ActionController::Base.logger.info "Query: now looking for: #{words} at location #{s} #{w} #{n} #{e}"
 		end
 
 		#
@@ -197,27 +281,20 @@ class QuerySupport
 		end
 
 		#
-		# Prior to going further lets give the aggregation engine a chance to setup new parties
-		# The aggregation engine normally runs in the background but here it may optionally freshen parties, timelines and friends
-		# This may set q[:parties] and q[:friends] and the like
+		# Give aggregator an opportunity to flesh out parties if it can do so quickly
 		#
 
-		TwitterSupport::aggregate_memoize(q,synchronous,restrict)
+		TwitterSupport::aggregate_memoize(q,restrict,synchronous)
 
 		#
-		# Restrict results to a specified set of named parties.
-		# On a strict restriction we want only specifically the parties named in the query.
-		# On a softer restriction we want the parties and all friends of that party named in the query.
-		# If no parties are specified then there is no restriction at all.
+		# If parties are supplied then limit results to parties ( and possibly friends of parties )
 		#
 
 		if q[:partynames] && q[:partynames].length
 			ActionController::Base.logger.info "Query: since a party was specified limit results *********************************"
 			partyids = []
 			if q[:parties] && q[:parties].length > 0
-				q[:parties].each do |party|
-					partyids << party.id
-				end
+				partyids = q[:parties].collect { |party| party.id }
 			else
 				q[:partynames].each do |name|
 					ActionController::Base.logger.info "Query: looking for #{name}"
@@ -231,27 +308,28 @@ class QuerySupport
 					partyids << party.id
 				end
 			end
-
- # include friends and friends of friends
-
 			if partyids.length > 0
 				conditions << "owner_id = ?"
 				condition_arguments << partyids
 			end
+
+# TODO we need to include friends and maybe friends of friends
+
 		end
 
 		#
-		# Perform the query finally
+		# Perform the query!
+		#
 		# TODO not wise to copy the database iterator to an array - try avoid this
 		#
 
-		conditions = [ conditions.join(' AND ') ] + condition_arguments
-		results_length = 0
 		results = []
+		results_length = 0
+		conditions = [ conditions.join(' AND ') ] + condition_arguments
 		ActionController::Base.logger.info "Query: performing query ************************ *********************************"
 		ActionController::Base.logger.info "ABOUT TO QUERY #{conditions} and #{condition_arguments.join(' *** ' ) } "
 		q[:log] << "ABOUT TO QUERY #{conditions} and #{condition_arguments.join(' *** ' ) } "
-		Note.all(:conditions => conditions , :offset => offset , :limit => limit, :order => "id desc" ).each do |note|
+		Note.all(:conditions => conditions , :offset => @offset , :limit => @limit, :order => "id desc" ).each do |note|
 			results << note
 			results_length = results_length + 1
 		end
@@ -266,7 +344,7 @@ class QuerySupport
 		# TODO this could be cleaned up massively using a bit of smarter SQL that finds uniques only or at least a HASH join
 		#
 
-		if !restrict
+		if true
 			ActionController::Base.logger.info "Query: injecting people ************************ *********************************"
 			people = {}
 			results.each do |post|
@@ -279,64 +357,41 @@ class QuerySupport
 			end
 		end
 
-		#
-		# INJECT URLS?
-		#
-		# for general cases we also have a specific interest in 'entities' such as hashtags, urls, places and clusters
-		# here i am injecting 'fake' entities into the stream for now.
-		# later the thought is to promote some of the current edges to be first class entities
-		# annoyingly since these are not real notes they do not have unique ids.
-		# TODO should i promote urls and like concepts to be first class objects? [ probably ]
-		#
-
-		if !restrict && inject
-			ActionController::Base.logger.info "Query: injecting urls ************************ *********************************"
-			entities = {}
-			results.each do |post|
-				next if post.kind != Note::KIND_POST
-				post.relations_all(Note::RELATION_URL).each do |relation|
-					ActionController::Base.logger.info "Query: got url results #{relation.kind} #{relation.value}"
-					url = relation.value
-					next if entities[url]
-					note = Note.new
-					note.title = relation.value
-					note.id = post.id * 1000000 + relation.id  # TODO such a hack ugh.
-					note.lat = post.lat
-					note.lon = post.lon
-					note.owner_id = post.owner_id
-					note.kind = Note::KIND_URL
-					entities[url] = note
-				end
-			end
-			entities.each do |key,value|
-				results << value
-				results_length = results_length + 1
-			end
+		if false
+			inject_urls(results)
 		end
 
-		# extra precise geographic boundaries?
 		#
-		# for general cases we want to carving against a multipolygon in some cases
+		# carve precisely against geographic polygonal boundaries if specified
 		#
 
-		if !restrict
-			ActionController::Base.logger.info "Query: injecting multipolygons ******************** *********************************"
-			multipolygon = q[:multipolygon]
-			if multipolygon
-				ActionController::Base.logger.info "Query: got rough results #{results} #{results_length}"
-				temp_results = []
-				results_length = 0
-				results.each do |result|
-					if WorldBoundaries.polygon_inside?(multipolygon,result.lon,result.lat)
-						temp_results << result
-						results_length = results_length + 1
-					end
+		ActionController::Base.logger.info "Query: injecting multipolygons ******************** *********************************"
+		multipolygon = q[:multipolygon]
+		if multipolygon
+			ActionController::Base.logger.info "Query: got rough results #{results} #{results_length}"
+			temp_results = []
+			results_length = 0
+			results.each do |result|
+				if WorldBoundaries.polygon_inside?(multipolygon,result.lon,result.lat)
+					temp_results << result
+					results_length = results_length + 1
 				end
-				results = temp_results
 			end
+			results = temp_results
 		end
 
-		# return results as well as the rest of the query work
+		#
+		# sort results by distance?
+		#
+
+		if sort
+			r = results[:results]
+			r.each { |note| note.rad = (lat-note.lat)*(lat-note.lat)+(lon-note.lon)*(lon-note.lon) }
+			r.sort! { |a,b| a.rad <=> b.rad }
+			results[:results] = r
+		end
+
+		# return results
 
 		ActionController::Base.logger.info "Query: got final results #{results} #{results_length}"
 		q[:results_length] = results_length
@@ -346,3 +401,4 @@ class QuerySupport
 	end
 
 end
+
