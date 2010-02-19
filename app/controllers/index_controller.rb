@@ -43,7 +43,9 @@ class IndexController < ApplicationController
   # restrict = do not return information about friends or friends of friends
   # synchronous = call aggregator right away - very slow
   # noinject = normally the system adds information about related urls which it has expanded for convenience - this can be disabled
-  #
+  # utc = last time stamp fetched ( so we can avoid shipping stuff older than this )
+  # offset = offset for pagination
+  # count = how many to fetch
 
   def perform_query 
 
@@ -105,7 +107,7 @@ class IndexController < ApplicationController
     @inject = false if params[:noinject] && params[:noinject] == "true"
 
     # go ahead and query for the data requested
-    @results = QuerySupport::query(@q,@s,@w,@n,@e,@country,@restrict,@synchronous,@inject)
+    @results = QuerySupport::query(@q,@s,@w,@n,@e,@country,@restrict,@synchronous,@inject,params[:utc],params[:offset],params[:count])
 
     # for the nov 18 ardemo for dorkbot i needed to distance sort the points and cull them so i don't crash the iphone
     # abuse the radius field for this
