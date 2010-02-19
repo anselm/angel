@@ -9,7 +9,6 @@
 <body>
 <%= render :partial => '/layouts/header' %>
 <%= @map.header() %>
-<%= flash[:notice] %>
 <div id="container">
 <%= yield  %>
 <%= @map.tail() %>

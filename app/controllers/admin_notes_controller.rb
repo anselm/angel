@@ -2,7 +2,7 @@ class AdminNotesController < ApplicationController
   before_filter :require_admin
   layout "admin"
   active_scaffold :note do |config|
-    config.label = '<a href="/users_admin">Users</a> Notes <a href="/relations_admin">Relations</a>'
+    config.label = '<a href="/admin_users">Users</a> Notes <a href="/admin_relations">Relations</a>'
     config.columns = [:title, :link, :description, :lon, :lat, :rad, :tagstring ]
     #config.ignore_columns.add [ :created_at, :updated_at ]
     list.sorting = {:updated_at => 'ASC'}
