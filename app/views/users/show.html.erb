@@ -1,52 +1,23 @@
-<h2><%= @user.login %></h2>
 <% if @user.photo.exists? then %>
 <%= image_tag @user.photo.url(:small) %><br/>
 <% else %>
 <img src="/images/default.jpg" width="50" height="50" style="border: 4px ridge grey" /><br/>
 <% end %>
-
-<% if @user.admin %>
-
-<a href="/notes_admin">Administer posts</a>
-<a href="/users_admin">Administer users</a>
-<a href="/relations_admin">Administer relations</a>
-
-<% end %>
-
-<p>
-  <b>Login:</b>
-  <%=h @user.login %>
-</p>
-
-<p>
-  <b>Login count:</b>
-  <%=h @user.login_count %>
-</p>
-
-<p>
-  <b>Last request at:</b>
-  <%=h @user.last_request_at %>
-</p>
-
-<p>
-  <b>Last login at:</b>
-  <%=h @user.last_login_at %>
-</p>
-
-<p>
-  <b>Current login at:</b>
-  <%=h @user.current_login_at %>
-</p>
-
-<p>
-  <b>Last login ip:</b>
-  <%=h @user.last_login_ip %>
-</p>
-
-<p>
-  <b>Current login ip:</b>
-  <%=h @user.current_login_ip %>
-</p>
-
+<h2><%= @user.login %></h2>
 
 <%= link_to 'Edit', edit_account_path %>
+
+<% if @user.admin %>
+<h2>Administrative details</h2>
+<table border=1>
+<tr><td bgcolor=grey>Login</td><td><%=@user.login%></td></tr>
+<tr><td bgcolor=grey>Login count</td><td><%=@user.login_count%></td></tr>
+<tr><td bgcolor=grey>Login request time</td><td><%=@user.last_request_at%></td></tr>
+<tr><td bgcolor=grey>Login last </td><td><%=@user.last_login_at%></td></tr>
+<tr><td bgcolor=grey>Login current </td><td><%=@user.current_login_at%></td></tr>
+<tr><td bgcolor=grey>Login last ip</td><td><%=@user.last_login_ip%></td></tr>
+<tr><td bgcolor=grey>Login current ip</td><td><%=@user.current_login_ip%></td></tr>
+</tr>
+</table>
+<% end %>
+
