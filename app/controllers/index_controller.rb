@@ -1,3 +1,4 @@
+
 require 'net/http'
 require 'uri'
 require 'open-uri'
@@ -7,8 +8,8 @@ require 'json/pure'
 require 'note.rb'
 require 'world_boundaries.rb'
 
-class IndexController < ApplicationController
-
+  #
+  # This app is largely client side driven... so server mostly exposes an API
   #
   # api goals
   #
@@ -25,7 +26,26 @@ class IndexController < ApplicationController
   #
   #
 
-  def json
+class IndexController < ApplicationController
+
+  #
+  # query support
+  # this is an internal convenience utility method
+  # query parameters come in via http parameters
+  # fetch the parameters and perform the query... 
+  #
+  # parameters
+  #
+  # q = persons, terms and location as in "@anselm pizza near san francisco"
+  # s,w,n,e = location bounds
+  # rad,lat,lon = another way of specifying bounds
+  # country = another way of restricting bounds
+  # restrict = do not return information about friends or friends of friends
+  # synchronous = call aggregator right away - very slow
+  # noinject = normally the system adds information about related urls which it has expanded for convenience - this can be disabled
+  #
+
+  def perform_query 
 
     # accept a query phrase including persons, places and terms
     @q = nil
@@ -72,38 +92,63 @@ class IndexController < ApplicationController
     @country = params[:country] if params[:country] && params[:country].length > 1
 
     # internal development test feature; ignore friends of specified parties
-    restrict = false
-    restrict = true if params[:restrict] && params[:restrict] == "true"
+    @restrict = false
+    @restrict = true if params[:restrict] && params[:restrict] == "true"
 
     # internal development test feature; test twitter aggregation
-    synchronous = false
-    synchronous = true if params[:synchronous] && params[:synchronous] == "true"
-    synchronous = true if restrict == true
+    @synchronous = false
+    @synchronous = true if params[:synchronous] && params[:synchronous] == "true"
+    @synchronous = true if @restrict == true
 
     # internal development test feature; do not get urls
-    inject = true
-    inject = false if params[:noinject] && params[:noinject] == "true"
+    @inject = true
+    @inject = false if params[:noinject] && params[:noinject] == "true"
 
     # go ahead and query for the data requested
-    results = QuerySupport::query(@q,@s,@w,@n,@e,@country,restrict,synchronous,inject)
+    @results = QuerySupport::query(@q,@s,@w,@n,@e,@country,@restrict,@synchronous,@inject)
 
     # for the nov 18 ardemo for dorkbot i needed to distance sort the points and cull them so i don't crash the iphone
     # abuse the radius field for this
     if @rad != nil && @rad > 0.0
-      r = results[:results]
+      r = @results[:results]
       r.each { |note| note.rad = (@lat-note.lat)*(@lat-note.lat)+(@lon-note.lon)*(@lon-note.lon) }
       r.sort! { |a,b| a.rad <=> b.rad }
       r = r[0...49]
       r.each { |note| ActionController::Base.logger.info "*** looking at #{note.title} at #{note.lat} and #{note.lon} and #{note.rad} " }
-      results[:results] = r
+      @results[:results] = r
     end
+
+    return @results
+
+  end
+
+  #
+  # IPHONE VIEW
+  # a compact view suitable for sending state to the iphone
+  #
+
+  def compress
+
+    results = perform_query
+
+  end
+
+  #
+  # JSON VIEW
+  #
+
+  def json
+
+    results = perform_query
 
     render :json => results.to_json
 
   end
 
   #
-  # test; fetch rss results on a specified country of posts only
+  # RSS VIEW
+  #
+  # fetch rss results on a specified country of posts only
   #
   def rss
     @posts = []
@@ -118,9 +163,11 @@ class IndexController < ApplicationController
   end
 
   #
-  # below is a test for flash globe - merge in above or throw away TODO
+  # SPINNYGLOBE VIEW
   #
-  def test2
+  # TEST  - test for flash globe - merge in above or throw away TODO
+  #
+  def spinnyglobe
     # we'll return a selection of recent posts that can be used to update the globe 
     @notes = Note.find(:all, :limit => 50, :order => "updated_at DESC", :conditions => { :kind => 'post' } );
     # from those posts I'd like to also return the related users
@@ -140,7 +187,11 @@ class IndexController < ApplicationController
   end
 
   #
+  # HTML VIEW
+  #
   # The client side is javascript so this does very litle - it just kicks off the json callback
+  # We do look at some persistent state information for where the map is centered... but thats about it.
+  # The rest is done by a json callback
   #
   def index
 

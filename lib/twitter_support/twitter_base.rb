@@ -430,6 +430,9 @@ end
 			ActionController::Base.logger.info "rate limit is at #{limit}"
 			ActionController::Base.logger.debug "oh oh rate limit exceeded" if limit < 1
 			break if limit < 1
+
+# should check to see if i should bother
+
 			blob = twitter.user(name_or_id)
 			next if !blob
 			party = self.save_party(

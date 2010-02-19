@@ -18,74 +18,65 @@ require 'lib/twitter_support/twitter_reap.rb'
 class TwitterSupport
 
 	#
-	# Do a fairly aggressive aggregation of a set of parties and all their friends - SLOW!
+	# Aggregate
 	#
-	def self.aggregate(q)
+	# in general the engine keeps track of the last time it polled twitter and yql and will not hammer on them if not needed
+	#
+	#
 
-		# reap old data TODO
+	def self.aggregate_memoize(q,synchronous=false,restrict=true)
 
-		ActionController::Base.logger.info "Query: aggregation of a query starting #{Time.now}"
+		ActionController::Base.logger.info "Query: aggregation starting #{Time.now}"
 
 		map_s = q[:s]
 		map_w = q[:w]
 		map_n = q[:n]
 		map_e = q[:e]
 
-		# did the user supply some people as the anchor of a search?
-		# refresh them and get their friends ( this is cheap and can be done synchronously )
-		q[:parties] = self.twitter_get_parties(q[:partynames])
-		q[:friends] = self.twitter_get_friends(q[:parties])
-		# q[:acquaintances] = self.twitter_get_friends(q[:friends])  # too expensive 
-
-		# pull fresh data. we have a variety of strategies we can use - hardcoded to yql for now
-		if q[:parties].length > 0
-			# if user supplied people then try one of these strategies
-			strategy = "friends_yql"
-			case strategy
-			when "bruteforce"
-				# in this strategy we collect all the traffic of all the friends one by one unfiltered. prohibitively expensive.
-				q[:parties].each { |party| self.twitter_refresh_timeline(party) }
-				q[:friends].each { |party| self.twitter_refresh_timeline(party) }
-			when "friends_twitter"
-				# in this strategy we look at the core participants only and collect their friends indirectly
-				# TODO unfortunately twitter does not allow this.
-				# q[:parties].each { |party| self.twitter_refresh_friends_timeline(party) }
-			when "friends_yql"
-				# in this strategy we talk to an intermediary like YQL and query on the set of friends for recent traffic.
-				# in this way we CAN do the query that we hope to do with friends_twitter
-				# we could also query on search terms if any and or apply a default search filter? like "help" and "i need"?
-				ActionController::Base.logger.info "query: using a yql search for parties"
-				self.yql_twitter_get_timelines(q[:parties])
-				self.yql_twitter_get_timelines(q[:friends])
-				# self.yql_twitter_get_timelines(q[:acquaintances])
-			when "recent"
-				# in this strategy we look at the core members only and get their friends recent timelines.
-			end
-		else
-			# if there are no people to anchor the search then just let twitter do the search
-			ActionController::Base.logger.info "query: using a general search strategy looking for #{q[:words].join(' ')} near #{map_s} #{map_w} #{map_n} #{map_e}"
-			self.twitter_search(q[:words],map_s,map_n,map_w,map_e) if q[:words] && q[:words].length > 0
+		# get parties
+		if true && q[:partynames] && q[:partynames].length > 0
+			ActionController::Base.logger.info "Query: Collecting explicitly stated parties now #{q[:partynames]} #{Time.now}"
+			q[:parties] = self.twitter_get_parties(q[:partynames])
+			ActionController::Base.logger.info "Query: Done collecting explicitly stated parties now #{q[:partynames]} #{Time.now}"
 		end
 
-		# TODO idea
-		# after an ordinary twitter search i would like to take the persons that were related to these posts and get them in more detail
-		# something like this:
-		# and get their friends too...
-		# this would help anchor a search quite a bit showing more context
-		# later i could even ask yql for those timelines in turn...
-		#		q[:parties] = self.twitter_get_parties(q[:partynames])
-		#		q[:friends] = self.twitter_get_friends(q[:parties])
+		# get parties timelines
+		if synchronous && q[:parties] && q[:parties].length > 0
+			# self.twitter_get_timelines(q[:parties])
+                        self.yql_twitter_get_timelines(q[:parties])
+		end
+
+		# get parties friends
+		if !restrict && synchronous && q[:parties] && q[:parties].length > 0
+			ActionController::Base.logger.info "Query: Collecting friends of parties now #{Time.now}"
+			q[:friends] = self.twitter_get_friends(q[:parties]) 
+			# q[:acquaintances] = self.twitter_get_friends(q[:friends])  # too expensive 
+			ActionController::Base.logger.info "Query: Done collecting friends of parties now #{Time.now}"
+		end
+
+		# get parties friends timelines
+		if !restrict && synchronous && q[:friends] && q[:friends].length > 0
+			self.yql_twitter_get_timelines(q[:friends])
+		end
+
+		# get friends of friends timelines - very expensive so disabled
+		if false && !restrict && synchronous && q[:acquaintances] && q[:acquaintances].length > 0
+			self.yql_twitter_get_timelines(q[:acquaintances])
+		end
+
+		# do a brute force twitter search if no parties
+		if synchronous && (!q[:partynames] || q[:partynames].length < 1) && q[:words] && q[:words].length > 0 
+			ActionController::Base.logger.info "query: using a general search strategy looking for #{q[:words].join(' ')} near #{map_s} #{map_w} #{map_n} #{map_e}"
+			self.twitter_search(q[:words],map_s,map_n,map_w,map_e) 
+		end
+
+		# for new people found during above searches - go ahead and collect their timelines and their friends - not done
+		if false
+		end
 
 		ActionController::Base.logger.info "Query: aggregation of a set has finished updating external data sources at time #{Time.now}"
 
 		return q
-	end
-
-	def self.aggregate_memoize(q,synchronous=false)
-		# in some cases we want to cache user queries TODO
-		if(synchronous == true)
-			self.aggregate(q)
-		end
 	end
 
 	def self.aggregate_all

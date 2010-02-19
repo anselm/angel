@@ -13,6 +13,7 @@ ActionController::Routing::Routes.draw do |map|
   map.signin 'signin', :controller => 'user_sessions', :action => 'new'
   map.signout 'signout', :controller => 'user_sessions', :action => 'destroy'
  
+  map.compress  'compress', :controller => 'index', :action => 'compress' 
   map.json  'json', :controller => 'index', :action => 'json' 
   map.xml   'xml', :controller => 'index', :action => 'xml' 
   map.rss   'rss', :controller => 'index', :action => 'rss' 

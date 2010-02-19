@@ -117,7 +117,10 @@ class QuerySupport
 	# also may call the aggregator
 	def self.query(question,map_s,map_w,map_n,map_e,country=nil,restrict=false,synchronous=false,inject=true)
 
+		#
 		# tear apart the query and get back a nicely digested parsed version of it
+		#
+
 		q = QuerySupport::query_parse(question)
 		q[:restrict] = restrict
 		q[:synchronous] = synchronous
@@ -128,12 +131,18 @@ class QuerySupport
 		s,w,n,e = nil
 		words = []
 
-		# build search query
+		#
+		# start to build sql search query
+		#
+
 		conditions = []
 		condition_arguments = []
 
-		# allow location query into sql statement if not restricted to a specific set of users - otherwise ignore location
-		if !restrict
+		#
+		# geo constrain query
+		#
+
+		if true
 			ActionController::Base.logger.info "Query: unrestricted query looking for location **********************************"
 
 			# try to figure out a geographic location for the query based on all the hints we got
@@ -153,47 +162,26 @@ class QuerySupport
 			end
 		
 			# always disallow features with 0,0 as a location
-			# TODO this fails
+			# TODO this fails... it still includes features that are at 0,0!
+
 			if true
 				conditions << "lat <> ? AND lon <> ?"
 				condition_arguments << 0
 				condition_arguments << 0
 			end
+		end
 
-			# terms?
+		#
+		# if there are search terms then add them to the search boundary
+		# TODO sanitize all search terms
+		#
+	
+		if q[:words] && q[:words].length > 0
+
 			words = q[:words]
 			ActionController::Base.logger.info "Query: now looking for: #{words} at location #{s} #{w} #{n} #{e}"
 			q[:log] << "Query: now looking for: #{words} at location #{s} #{w} #{n} #{e}"
 
-		end
-
-		# for now - collect right away the actual parties indicated by the nicks - if restricted to those nicks
-		# TODO debatable if should be here
-		if restrict && synchronous
-			ActionController::Base.logger.info "Query: restricted query updating parties **********************************"
-			ActionController::Base.logger.info "Query: restricted query updating parties #{q[:partynames]}"
-			q[:log] << "Query: restricted query updating parties #{q[:partynames]}"
-			q[:log] << "Aggregating synchronously beginning now #{Time.now}"
-			q[:parties] = TwitterSupport::twitter_get_parties(q[:partynames])
-			#q[:friends] = TwitterSupport::twitter_get_friends(q[:parties])
-			TwitterSupport::twitter_get_timelines(q[:parties])
-			q[:log] << "Aggregating synchronously done now #{Time.now}"
-		end
- 
-		# aggregate?
-		# TODO the above code is totally mutually exclusive with this code and it would be cleaner if above code was inside aggregate_memoize
-		if !restrict && synchronous
-			ActionController::Base.logger.info "Query: synchronous query updating parties **********************************"
-			ActionController::Base.logger.info "Aggregating synchronously beginning now #{Time.now}"
-			q[:log] << "Aggregating synchronously beginning now #{Time.now}"
-			TwitterSupport::aggregate_memoize(q,true)
-			ActionController::Base.logger.info "Aggregating synchronously done now #{Time.now}"
-			q[:log] << "Aggregating synchronously done now #{Time.now}"
-		end
-
-		# if there are search terms then add them to the search boundary
-		# are we totally cleaning words to disallow garbage? TODO
-		if(words != nil && words.length > 0 )
 			conditions << "description @@ to_tsquery(?)"
 			condition_arguments << words.join('&')
 			conditions << "title @@ to_tsquery(?)"
@@ -201,7 +189,7 @@ class QuerySupport
 		end
 
 		#
-		# filter for posts here; we'll collect people related to those posts later
+		# filter by posts ( this is always true )
 		#
 		if true
 			conditions << "kind = ?"
@@ -209,13 +197,22 @@ class QuerySupport
 		end
 
 		#
-		# if restricted around the named parties then explicitly get that set
-		# TODO this is different enough that it is arguable if we should have it in the same code block
-		# TODO not just twitter
-		# TODO we could just look at the parties
+		# Prior to going further lets give the aggregation engine a chance to setup new parties
+		# The aggregation engine normally runs in the background but here it may optionally freshen parties, timelines and friends
+		# This may set q[:parties] and q[:friends] and the like
 		#
-		if restrict && q[:partynames] && q[:partynames].length
-			ActionController::Base.logger.info "Query: restricted traffic fetch of party data from db *********************************"
+
+		TwitterSupport::aggregate_memoize(q,synchronous,restrict)
+
+		#
+		# Restrict results to a specified set of named parties.
+		# On a strict restriction we want only specifically the parties named in the query.
+		# On a softer restriction we want the parties and all friends of that party named in the query.
+		# If no parties are specified then there is no restriction at all.
+		#
+
+		if q[:partynames] && q[:partynames].length
+			ActionController::Base.logger.info "Query: since a party was specified limit results *********************************"
 			partyids = []
 			if q[:parties] && q[:parties].length > 0
 				q[:parties].each do |party|
@@ -234,6 +231,9 @@ class QuerySupport
 					partyids << party.id
 				end
 			end
+
+ # include friends and friends of friends
+
 			if partyids.length > 0
 				conditions << "owner_id = ?"
 				condition_arguments << partyids
@@ -241,24 +241,24 @@ class QuerySupport
 		end
 
 		#
-		# collect a big old pile of posts
-		# TODO pagination
+		# Perform the query finally
+		# TODO not wise to copy the database iterator to an array - try avoid this
 		#
+
 		conditions = [ conditions.join(' AND ') ] + condition_arguments
 		results_length = 0
 		results = []
-
-		# perform our query
 		ActionController::Base.logger.info "Query: performing query ************************ *********************************"
 		ActionController::Base.logger.info "ABOUT TO QUERY #{conditions} and #{condition_arguments.join(' *** ' ) } "
 		q[:log] << "ABOUT TO QUERY #{conditions} and #{condition_arguments.join(' *** ' ) } "
-		Note.all(:conditions => conditions , :limit => 255, :order => "id desc" ).each do |note|
+		Note.all(:conditions => conditions , :offset => offset , :limit => limit, :order => "id desc" ).each do |note|
 			results << note
 			results_length = results_length + 1
 		end
 		ActionController::Base.logger.info "GOT #{results_length} posts "
 		q[:log] << "GOT #{results_length} posts "
 
+		#
 		# INJECT PEOPLE?
 		#
 		# for general cases
@@ -279,6 +279,7 @@ class QuerySupport
 			end
 		end
 
+		#
 		# INJECT URLS?
 		#
 		# for general cases we also have a specific interest in 'entities' such as hashtags, urls, places and clusters
