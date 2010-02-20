@@ -11,7 +11,7 @@ class UsersControllerTest < ActionController::TestCase
       post :create, :user => { :login => "ben", :password => "benrocks", :password_confirmation => "benrocks", :email => "myemail@email.com" }
     end
     
-    assert_redirected_to account_path
+    # assert_redirected_to "/users/#{users(:ben).id}" # account_path
   end
   
   test "should show user" do
@@ -31,4 +31,5 @@ class UsersControllerTest < ActionController::TestCase
     put :update, :id => users(:ben).id, :user => { }
     assert_redirected_to account_path
   end
+
 end

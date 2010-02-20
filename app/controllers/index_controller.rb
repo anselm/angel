@@ -4,27 +4,9 @@ require 'uri'
 require 'open-uri'
 require 'lib/query_support.rb'
 require 'json/pure'
-#require 'json/add/rails'
+# require 'json/add/rails'
 require 'note.rb'
 require 'world_boundaries.rb'
-
-  #
-  # This app is largely client side driven... so server mostly exposes an API
-  #
-  # api goals
-  #
-  # 1) allow subscribers to indicate a series of sources to follow
-  # 2) allow subscribers to fetch back posts of parties they are watching
-  # 3) allow subscribers to issue general queries such as person, place and terms
-  # 4) allow subscribers to upscore or downscore any entity
-  # 5) allow subscribers to indicate a matchmaking opportunity
-  # 6) allow subscribers to attach a note to a subject
-  # 7) allow subscribers to make new subjects
-  # 8) identify subscribers by a name and password
-  # 9) allow subscribers to tag an entity to allow entity grouping
-  # 10) allow subscribers to request an update on an entire set such as a tagged set
-  #
-  #
 
 class IndexController < ApplicationController
 
@@ -34,7 +16,7 @@ class IndexController < ApplicationController
   #
 
   def compress
-	results = QuerySupport::query(params,session)
+    results = QuerySupport::query(params,session)
   end
 
   #
@@ -42,7 +24,7 @@ class IndexController < ApplicationController
   #
 
   def json
-	results = QuerySupport::query(params,session)
+    results = QuerySupport::query(params,session)
     render :json => results.to_json
   end
 
@@ -53,10 +35,10 @@ class IndexController < ApplicationController
   #
   def rss
     @posts = []
-	results = QuerySupport::query(params)
-	results[:results].each do |result|
+    results = QuerySupport::query(params)
+    results[:results].each do |result|
       @posts << result if result.kind == Note::KIND_POST
-	end
+    end
     headers["Content-Type"] = "application/xml; charset=utf-8"
     render :layout => false
   end
@@ -103,18 +85,20 @@ class IndexController < ApplicationController
     # for the map - pass any location string down to the json layer as well
     @map.south = @map.west = @map.north = @map.east = 0.0
     begin
-	# attempt to fetch map location from parameters
-	@map.south    = session[:s] = params[:s].to_f if params[:s]
-	@map.west     = session[:w] = params[:w].to_f if params[:w]
-	@map.north    = session[:n] = params[:n].to_f if params[:n]
-	@map.east     = session[:e] = params[:e].to_f if params[:e]
-	# otherwise fetch them from session state if present (or set to nil)
-	@map.south    = session[:s].to_f if !params[:s]
-	@map.west     = session[:w].to_f if !params[:w]
-	@map.north    = session[:n].to_f if !params[:n]
-	@map.east     = session[:e].to_f if !params[:e]
+      # attempt to fetch map location from parameters
+      @map.south    = session[:s] = params[:s].to_f if params[:s]
+      @map.west     = session[:w] = params[:w].to_f if params[:w]
+      @map.north    = session[:n] = params[:n].to_f if params[:n]
+      @map.east     = session[:e] = params[:e].to_f if params[:e]
+      # otherwise fetch them from session state if present (or set to nil)
+      @map.south    = session[:s].to_f if !params[:s]
+      @map.west     = session[:w].to_f if !params[:w]
+      @map.north    = session[:n].to_f if !params[:n]
+      @map.east     = session[:e].to_f if !params[:e]
     rescue
     end
+
+    logger.info "is at #{@map.north} #{@map.west}"
 
     # for the map - try tp pass any explicit country request down to the json layer
     @country = nil

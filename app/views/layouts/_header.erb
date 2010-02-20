@@ -13,6 +13,7 @@
 <% else %>
 <% if current_user.admin %>
 <%= link_to "admin", "/admin_notes" %> |
+<%= link_to "users", "/users" %> |
 <% end %>
 welcome home <%= link_to "#{current_user.login}!", "/users/#{current_user.login}" %> |
 <%= link_to "signout", user_session_path, :method => :delete %> |

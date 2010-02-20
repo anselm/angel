@@ -9,6 +9,11 @@ class ApplicationController < ActionController::Base
   filter_parameter_logging :password, :password_confirmation
 
   before_filter :map_start
+
+  def account_path
+     return "/users/#{current_user.login}" if current_user
+     return "/users"
+  end
   
   def map_start
     @map = Dynamapper.new(:apikey => SETTINGS[:googlemaps], :height => "340px" )

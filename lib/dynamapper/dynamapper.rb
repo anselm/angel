@@ -775,7 +775,7 @@ function mapper_page_paint_request(recenter) {
           spinner.id = "spinner";
           spinner.style.position = "absolute";
           spinner.style.left = "10px";
-          spinner.style.top = "100px";
+          spinner.style.top = "300px";
           spinner.style.display = "block";
           document.body.appendChild(spinner);
         }

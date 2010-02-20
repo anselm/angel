@@ -31,6 +31,7 @@ class QuerySupport
 	# pull out persons, search terms and tags, location such as "@anselm pizza near portland oregon"
 	# TODO should publish the query so everybody can see what everybody is searching for
 	def self.query_parse(phrase)
+		return {} if !phrase || phrase.length < 1
 		words = []
 		partynames = []
 		placenames = []
@@ -85,7 +86,7 @@ class QuerySupport
 		end
 
 		# if we have no boundaries then try to look at hints from the query string if any
-		if found_boundaries == false && q[:placenames].length
+		if found_boundaries == false && q[:placenames] && q[:placenames].length
 			lat,lon,rad = 0.0, 0.0, 0.0
 			lat,lon,rad = Dynamapper.geolocate(q[:placenames].join(' '))
 			rad = 5.0 # TODO hack remove
@@ -107,7 +108,7 @@ class QuerySupport
 			q[:w] = map_w.to_f;
 			q[:n] = map_n.to_f;
 			q[:e] = map_e.to_f;
-			ActionController::Base.logger.info "query: located the query to previous #{map_w} #{map_e} #{map_n} #{map_s}"
+			ActionController::Base.logger.info "query: located the query to explicit #{map_w} #{map_e} #{map_n} #{map_s}"
 		end
 
 		return q
@@ -147,7 +148,7 @@ class QuerySupport
 		end
 	end
 
-	def self.query(params,session=[])
+	def self.query(params,session)
 
 		question = nil
 		country = nil
@@ -163,8 +164,8 @@ class QuerySupport
 		lat = 0.0
 		sort = false
 
-		# get query phrase
-		question = session[:q] = params[:q].to_s if params[:q]
+		# build query from raw question string
+		q = QuerySupport::query_parse(params[:q])
 
 		# accept an explicit country code - this will override the location boundary supplied above
 		country = params[:country] if params[:country] && params[:country].length > 1
@@ -218,12 +219,12 @@ class QuerySupport
 
 		QuerySupport::query_locate(q,country,s,w,n,e)
 		s,w,n,e = q[:s],q[:w],q[:n],q[:e]
+		ActionController::Base.logger.info "Query: now looking at location #{w} #{e} #{n} #{s}"
 
 		#
 		# store arguments
 		#
 
-		q = QuerySupport::query_parse(question)
 		q[:restrict] = restrict
 		q[:synchronous] = synchronous
 		q[:country] = country
@@ -268,16 +269,17 @@ class QuerySupport
 			condition_arguments << words.join('&')
 			conditions << "title @@ to_tsquery(?)"
 			condition_arguments << words.join('&')
-			q[:log] << "Query: now looking for: #{words} at location #{s} #{w} #{n} #{e}"
-			ActionController::Base.logger.info "Query: now looking for: #{words} at location #{s} #{w} #{n} #{e}"
+			q[:log] << "Query: now looking for: #{words}"
+			ActionController::Base.logger.info "Query: now looking for: #{words}"
 		end
 
 		#
-		# filter by posts ( this is always true )
+		# filter by posts or users
 		#
 		if true
-			conditions << "kind = ?"
+			conditions << " ( kind = ? OR kind = ?) "
 			condition_arguments << Note::KIND_POST
+			condition_arguments << Note::KIND_USER
 		end
 
 		#
@@ -291,7 +293,7 @@ class QuerySupport
 		#
 
 		if q[:partynames] && q[:partynames].length
-			ActionController::Base.logger.info "Query: since a party was specified limit results *********************************"
+			ActionController::Base.logger.info "Query: since a party was specified limit results *********"
 			partyids = []
 			if q[:parties] && q[:parties].length > 0
 				partyids = q[:parties].collect { |party| party.id }
@@ -326,8 +328,8 @@ class QuerySupport
 		results = []
 		results_length = 0
 		conditions = [ conditions.join(' AND ') ] + condition_arguments
-		ActionController::Base.logger.info "Query: performing query ************************ *********************************"
-		ActionController::Base.logger.info "ABOUT TO QUERY #{conditions} and #{condition_arguments.join(' *** ' ) } "
+		ActionController::Base.logger.info "Query: performing query ************************************"
+		ActionController::Base.logger.info "ABOUT TO QUERY #{conditions.join(' ')} and #{condition_arguments.join(' ' ) } "
 		q[:log] << "ABOUT TO QUERY #{conditions} and #{condition_arguments.join(' *** ' ) } "
 		Note.all(:conditions => conditions , :offset => @offset , :limit => @limit, :order => "id desc" ).each do |note|
 			results << note
@@ -345,7 +347,7 @@ class QuerySupport
 		#
 
 		if true
-			ActionController::Base.logger.info "Query: injecting people ************************ *********************************"
+			ActionController::Base.logger.info "Query: injecting people *****************************"
 			people = {}
 			results.each do |post|
 				person = Note.find(:first,:conditions => { :id => post.owner_id } )
@@ -365,7 +367,7 @@ class QuerySupport
 		# carve precisely against geographic polygonal boundaries if specified
 		#
 
-		ActionController::Base.logger.info "Query: injecting multipolygons ******************** *********************************"
+		ActionController::Base.logger.info "Query: injecting multipolygons ***************************"
 		multipolygon = q[:multipolygon]
 		if multipolygon
 			ActionController::Base.logger.info "Query: got rough results #{results} #{results_length}"

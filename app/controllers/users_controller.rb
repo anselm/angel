@@ -14,6 +14,8 @@ class UsersController < ApplicationController
   end
   
   def show
+    @page = params[:page] || 0
+    @count = params[:count] || 100
   end
 
   def edit

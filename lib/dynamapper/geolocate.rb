@@ -30,13 +30,16 @@ class Dynamapper
       response = http.request(req)
       case response
       when Net::HTTPSuccess then
+        ActionController::Base.logger.info "dynamapper geolocation got #{response.body.to_s}"
         data = JSON.parse(response.body.to_s)
         lat = data["Locations"][0]["Centroid"]["Latitude"].to_f
         lon = data["Locations"][0]["Centroid"]["Longitude"].to_f
         return lat,lon,25
       end
     rescue Timeout::Error
+      ActionController::Base.logger.info "dynamapper geolocation failure due to timeout"
     rescue
+      ActionController::Base.logger.info "dynamapper geolocation failure no reason"
     end
     return 0,0,0
   end
