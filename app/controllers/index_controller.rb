@@ -124,7 +124,8 @@ class IndexController < ApplicationController
   end
 
   def about
-    render :layout => 'static'
+    # render :layout => 'static'
+    @map = nil
   end
 
 end

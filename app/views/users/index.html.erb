@@ -1,0 +1,4 @@
+<h2>Angels</h2>
+<% User.all.each do |user| %>
+<%= render :partial => '/users/icon', :locals => { :user => user } %>
+<% end %>

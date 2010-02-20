@@ -8,13 +8,13 @@
 </form>
 <%= link_to "new", "/notes/new" %> |
 <% if !current_user %>
-<%= link_to "signup", new_account_path %> |
+<%= link_to "signup", "/users/new" %> |
 <%= link_to "signin", new_user_session_path %>
 <% else %>
 <% if current_user.admin %>
 <%= link_to "admin", "/admin_notes" %> |
 <% end %>
-<%= link_to "home", account_path %> |
+welcome home <%= link_to "#{current_user.login}!", "/users/#{current_user.login}" %> |
 <%= link_to "signout", user_session_path, :method => :delete %> |
 <%= link_to "about", "/about" %>
 <% end %>

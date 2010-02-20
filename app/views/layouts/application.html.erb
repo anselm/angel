@@ -8,9 +8,9 @@
 </head>
 <body>
 <%= render :partial => '/layouts/header' %>
-<%= @map.header() %>
+<%= @map.header() if @map %>
 <div id="container">
 <%= yield  %>
-<%= @map.tail() %>
+<%= @map.tail() if @map %>
 <div id="footer"></div>
 </html>

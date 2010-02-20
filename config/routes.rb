@@ -4,7 +4,6 @@ ActionController::Routing::Routes.draw do |map|
   map.resources :admin_relations, :active_scaffold => true
   map.resources :admin_users, :active_scaffold => true
 
-  map.resource :account, :controller => "users"
   map.resource :user_session
   map.resources :users
   map.about 'about', :controller => 'index', :action => 'about'

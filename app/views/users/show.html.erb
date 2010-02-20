@@ -1,13 +1,11 @@
-<% if @user.photo.exists? then %>
-<%= image_tag @user.photo.url(:small) %><br/>
-<% else %>
-<img src="/images/default.jpg" width="50" height="50" style="border: 4px ridge grey" /><br/>
-<% end %>
-<h2><%= @user.login %></h2>
+<%= render :partial => '/users/icon', :locals => { :user => @user } %>
 
-<%= link_to 'Edit', edit_account_path %>
+<%if @user == current_user || ( current_user && current_user.admin == true ) -%>
+<%= link_to 'Edit', "/users/edit/#{@user.login}" %>
+<%= link_to "Delete", {:action => "delete", :id => @user.login}, :confirm => "Are you sure!?" %>
+<% end -%>
 
-<% if @user.admin %>
+<% if current_user && current_user.admin %>
 <h2>Administrative details</h2>
 <table border=1>
 <tr><td bgcolor=grey>Login</td><td><%=@user.login%></td></tr>

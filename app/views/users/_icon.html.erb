@@ -1,0 +1,8 @@
+<div>
+<% link_to("/users/#{user.login}") do %>
+ <% if user.photo.exists? then %> <%= image_tag user.photo.url(:small) %><br/>
+ <% else %> <img src="/images/default.jpg" width="50" height="50" style="border: 4px ridge grey" /><br/>
+ <% end %>
+<% end %>
+<h2><%= user.login %></h2>
+</div>

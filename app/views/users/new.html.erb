@@ -1,8 +1,11 @@
 <h1>Register</h1>
 Or <%= link_to "Signin", signin_path %> instead.
  
-<% form_for(@user, :url => account_path, :html => { :multipart => true } ) do |f| %>
+<% form_for(@user, :url => "/users/#{@user.id}", :html => { :multipart => true } ) do |f| %>
   <%= f.error_messages %>
   <%= render :partial => "form", :object => f %>
+  <br/>
+  <br/>
   <%= f.submit "Register" %>
 <% end %>
+
