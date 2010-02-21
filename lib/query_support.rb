@@ -152,7 +152,6 @@ class QuerySupport
 
 		question = nil
 		country = nil
-		restrict = false
 		synchronous = false
 		inject = true
 		offset = 0
@@ -169,9 +168,6 @@ class QuerySupport
 
 		# accept an explicit country code - this will override the location boundary supplied above
 		country = params[:country] if params[:country] && params[:country].length > 1
-
-		# internal development test feature; ignore friends of specified parties
-		restrict = true if params[:restrict] && params[:restrict] == "true"
 
 		# internal development test feature; test twitter aggregation
 		synchronous = true if params[:synchronous] && params[:synchronous] == "true"
@@ -225,7 +221,6 @@ class QuerySupport
 		# store arguments
 		#
 
-		q[:restrict] = restrict
 		q[:synchronous] = synchronous
 		q[:country] = country
 		q[:inject] = inject
@@ -286,7 +281,7 @@ class QuerySupport
 		# Give aggregator an opportunity to flesh out parties if it can do so quickly
 		#
 
-		TwitterSupport::aggregate_memoize(q,restrict,synchronous)
+		TwitterSupport::aggregate_memoize(q,synchronous)
 
 		#
 		# If parties are supplied then limit results to parties ( and possibly friends of parties )
