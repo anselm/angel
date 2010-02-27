@@ -1,8 +1,7 @@
 production:
-    name: SwiftRiver Iran Elections
-    url: http://iranelection.swiftapp.org
-    iphone_url: http://iphone.votereport.in
-    audio_url: http://calls.votereport.in
-    tag: iranelection
-    tags: iran09,iranelection,tehran,mousavi
+    name: Ubiquitous Angels
+    url: http://angel.makerlab.org
+    iphone_url: http://angel.makerlab.org
+    tag: angel
+    tags: angel
 

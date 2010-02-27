@@ -20,11 +20,11 @@ end
 
 while($running) do
 
-  # update 10 people
+  # update some not recently updated people
   TwitterSupport::aggregate
 
-  # sleep for ten minutes
-  sleep 60
+  # sleep for a spell
+  sleep 600
 
 end
 

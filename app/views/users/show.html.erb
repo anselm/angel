@@ -5,6 +5,22 @@
 <%= link_to "Delete", {:action => "delete", :id => @user.login}, :confirm => "Are you sure!?" %>
 <% end -%>
 
+<div style="border:2px solid green">
+<a href="/notes/new">Add New</a>
+</div>
+
+<!-- the home page itself could just provide a filtered view of your stuff with a map...
+     or we can use a strictly delicious style view
+   -->
+<div style="border:2px solid green">
+<a href="/notes/new">Explore stuff!</a>
+</div>
+
+<% # This is local hinting for recent acquisitions... This can be moved to a utility or helper or just to notes later
+   Note.find(:all,:conditions => { :owner_id => @user.id }, :offset => 0, :limit => 10, :order => "id desc" ).each do |note| -%>
+<%= render :partial => '/notes/icon', :locals => { :is_owner => true, :note => note } %>
+<% end -%>
+
 <% if current_user && current_user.admin %>
 <h2>Administrative details</h2>
 <table border=1>

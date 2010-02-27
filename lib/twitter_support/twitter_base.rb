@@ -202,7 +202,7 @@ class TwitterSupport
 						}
 				)
 		ActionController::Base.logger.info "the last posted post of this party #{party.title} is #{last.uuid}" if last
-		return last.uuid if last
+		return last.uuid.to_i if last
 		return 0
 	end
 
@@ -265,7 +265,7 @@ class TwitterSupport
 			end
 			ActionController::Base.logger.info "Geolocated a party #{title} to #{lat},#{lon},#{rad} ... #{location}"
 		end
-
+	
 		# add the party if new or just update features
 		if !party
 			party = Note.new(
@@ -281,16 +281,30 @@ class TwitterSupport
 				:rad => rad,
 				:begins => begins,
 				:score => score,
-				:statebits => ( Note::STATEBITS_DIRTY | Note::STATEBITS_GEOLOCATED )
+				:statebits => ( Note::STATEBITS_DIRTY | Note::STATEBITS_GEOLOCATED ),
+				:created_at => Time.now, # TODO this was failing - verify?
+				:updated_at => Time.now
 				)
 			party.save
 			ActionController::Base.logger.info "Saved a new party with title #{title}"
 		else
-			# TODO note that for some reason :updated_at is not set as it should be
-			party.update_attributes(:title => title, :description => description );
 			if lat && lon && lat < 0.0 || lat > 0.0 || lon < 0.0 || lon > 0.0
-				party.update_attributes(:lat => lat, :lon => lon )
+				# party.update_attributes(:lat => lat, :lon => lon )
+			else
+				lat = party.lat || 0.0
+				lon = party.lon || 0.0
 			end
+			party.update_attributes(
+				:title => title,
+				:description => description,
+				:location => location,
+				:score => score,
+				:lat => lat,
+				:lon => lon,
+				:updated_at => Time.now	# IS THIS NEEDED? TODO this was failing verify
+				)
+
+			# TODO if a party had a geolocation and it changed we may want to post an empty note with that fact
 
 			ActionController::Base.logger.info "Updated a party with title #{title}"
 		end
@@ -427,13 +441,83 @@ class TwitterSupport
 		results = []
 		twitter = twitter_start
 		limit = self.twitter_get_remaining_hits
-		ActionController::Base.logger.info "Collecting fresh state of a party #{names_or_ids}"
+		ActionController::Base.logger.info "Collecting fresh state of a party set #{names_or_ids}"
 		names_or_ids.each do |name_or_id|
 			limit -= 1
 			ActionController::Base.logger.info "rate limit is at #{limit}"
 			ActionController::Base.logger.debug "oh oh rate limit exceeded" if limit < 1
 			break if limit < 1
 			blob = twitter.user(name_or_id)
+			next if !blob
+			party = self.save_party(
+					:provenance => "twitter",
+					:uuid => blob.id,
+					:title => blob.screen_name,
+					:location => blob["location"],
+					:description => blob.description,
+					:begins => Time.parse(blob.created_at),
+					:score => 0
+					)
+			results << party if party
+		end
+		return results
+	end
+
+	# update parties
+	# gives us a blob like this
+	#
+	# contributors_enabled=false
+	# created_at="Mon Mar 05 16:37:33 +0000 2007"
+	# description="arts hiking eco env geo sims fog ardevcamp.org meedan.net makerlab.com"
+	# favourites_count=8
+	# followers_count=1612
+	# following=false
+	# friends_count=1999
+	# geo_enabled=true
+	# id=812567
+	# lang="en"
+	# location="San Francisco, California"
+	# name="anselm hook"
+	# notifications=false
+	# profile_background_color="d8ea1f"
+	# profile_background_image_url="http://a3.twimg.com/profile_background_images/13427505/3237764_ef48ae407d_o.jpg"
+	# profile_background_tile=false profile_image_url="http://a3.twimg.com/profile_images/706711399/anselm_face_normal.jpg"
+	# profile_link_color="1F98C7"
+	# profile_sidebar_border_color="398bac"
+	# profile_sidebar_fill_color="dd9869"
+	# profile_text_color="211221"
+	# protected=false
+	# screen_name="anselm"
+	# status= {
+	#	created_at="Wed Feb 24 19:42:22 +0000 2010"
+	#   favorited=false
+	#   id=9589549592
+	#   in_reply_to_screen_name=nil
+	#   in_reply_to_status_id=nil
+	#   in_reply_to_user_id=nil
+	#   source="<a href=\"http://twitterrific.com\"
+	#   rel=\"nofollow\">Twitterrific</a>"
+	#   text="working out of @souk in portland oregon - very nice"
+	#   truncated=false
+	# }
+	# statuses_count=6086
+	# time_zone="Pacific Time (US & Canada)"
+	# url="http://hook.org"
+	# utc_offset=-28800
+	# verified=false
+	#
+
+	def self.twitter_update_parties(parties)
+		results = []
+		twitter = twitter_start
+		limit = self.twitter_get_remaining_hits
+		ActionController::Base.logger.info "Collecting fresh state of a party #{parties}"
+		parties.each do |party|
+			limit -= 1
+			ActionController::Base.logger.info "rate limit is at #{limit}"
+			ActionController::Base.logger.debug "oh oh rate limit exceeded" if limit < 1
+			break if limit < 1
+			blob = twitter.user(party.uuid)
 			next if !blob
 			party = self.save_party(
 					:provenance => "twitter",
@@ -459,41 +543,70 @@ class TwitterSupport
 	# TODO manual updated_at? for some reason this has to be done explicity - note that we rely on this behavior - and it is implicit
 	##########################################################################################################
 
-	def self.twitter_get_friends(parties)
+	def self.twitter_get_friends_of_party(twitter,party,results,limit,score=1)
+		old = 4.hours.ago
+		# TODO always reget this for now because i was concerned about missing updates - re-enable later and test
+		if false && party.updated_at > old  # if updated at time is bigger(newer) than 4 hours agos bigness then skip
+			ActionController::Base.logger.info "Skip getting friends of #{party.title} - updated recently #{party.updated_at}"
+			party.relation_all_siblings_as_notes(Note::RELATION_FRIEND,nil).each do |party2|
+				results << party2  # TODO sloppy - just use an array concatenation
+			end
+			next
+		end
+		ActionController::Base.logger.info "decided to update this user #{party.title} because #{party.updated_at} is not > #{old}"
+		limit = limit - 1
+		ActionController::Base.logger.debug "oh oh rate limit exceeded" if limit < 1
+		return limit if limit < 1
+		twitter.friends({:user_id => party.uuid, :page=>1}).each do |blob|
+			party2 = self.save_party(
+				:provenance => "twitter",
+				:uuid => blob.id,
+				:title => blob.screen_name,
+				:location => blob["location"],
+				:description => blob.description,
+				:begins => Time.parse(blob.created_at),
+				:score => score
+				)
+			party.relation_add(Note::RELATION_FRIEND,1,party2.id)  # party1 has chosen to follow party2
+			results << party2
+			ActionController::Base.logger.info "saved a friend of #{party.title} named #{party2.title}"
+		end
+		party.update_attributes(:updated_at => Time.now )
+		return limit
+	end
+
+	# this is deprecated - it doesn't get very may friends
+	def self.twitter_get_friends(parties,score=1)
 		twitter = twitter_start
 		results = []
 		limit = self.twitter_get_remaining_hits
-		old = 4.hours.ago
 		parties.each do |party|
-			# TODO always reget this for now because i was concerned about missing updates - re-enable later and test
-			if false && party.updated_at > old  # if updated at time is bigger(newer) than 4 hours agos bigness then skip
-				ActionController::Base.logger.info "Skip getting friends of #{party.title} - updated recently #{party.updated_at}"
-				party.relation_all_siblings_as_notes(Note::RELATION_FRIEND,nil).each do |party2|
-					results << party2  # TODO sloppy - just use an array concatenation
-				end
-				next
-			end
-			ActionController::Base.logger.info "decided to update this user because #{party.updated_at} is not > #{old}"
-			limit -= 1
-			ActionController::Base.logger.debug "oh oh rate limit exceeded" if limit < 1
+			limit = self.twitter_get_friends_of_party(twitter,party,results,limit,score)
 			break if limit < 1
-			twitter.friends({:user_id => party.uuid, :page=>1}).each do |blob|
+		end
+		return results
+	end
+
+	# this is preferred - get ids and then later get actual parties
+	def self.twitter_get_friends_ids(parties,score=1) 
+		twitter = twitter_start
+		results = []
+		limit = self.twitter_get_remaining_hits
+		return if limit < 1
+		time = Time.now
+		parties.each do |party|
+			# ignore the supplied score and make this party score one further than the score of its parent TODO is ok?
+			score = party.score
+			twitter.friend_ids({:user_id => party.uuid, :page=>1}).each do |blob|
 				party2 = self.save_party(
 					:provenance => "twitter",
 					:uuid => blob.id,
-					:title => blob.screen_name,
-					:location => blob["location"],
-					:description => blob.description,
-					:begins => Time.parse(blob.created_at),
-					:score => 1
+					:begins => time,
+					:score => score
 					)
 				party.relation_add(Note::RELATION_FRIEND,1,party2.id)  # party1 has chosen to follow party2
-				results << party2
-				ActionController::Base.logger.info "saved a friend of #{party.title} named #{party2.title}"
 			end
-			party.update_attributes(:updated_at => Time.now )
 		end
-		return results
 	end
 
 	##########################################################################################################
@@ -580,10 +693,53 @@ class TwitterSupport
 
 	##########################################################################################################
 	# collect messages from a single person more recent than last collection only - also add them to system
-	# TODO switch to YQL
 	##########################################################################################################
 
-	def self.twitter_refresh_timeline(party)
+	# gives us a blob like this
+	#
+    # contributors=nil
+	# created_at="Wed Feb 24 19:42:22 +0000 2010"
+	# favorited=false geo=nil
+	# id=9589549592
+	# in_reply_to_screen_name=nil
+	# in_reply_to_status_id=nil
+	# in_reply_to_user_id=nil
+	# source="<a href=\"http://twitterrific.com\" rel=\"nofollow\">Twitterrific</a>"
+	# text="working out of @souk in portland oregon - very nice"
+	# truncated=false
+	# user {
+	#   contributors_enabled=false
+	#   created_at="Mon Mar 05 16:37:33 +0000 2007"
+	#   description="arts hidan.net makerlab.com"
+	#   favourites_count=8
+	#   followers_count=1612
+	#   following=false
+	#   friends_count=1999
+	#   geo_enabled=true
+	#   id=812567
+	#   lang="en"
+	#   location="San Francisco, California"
+	#   name="anselm hook"
+	#   notifications=false
+	#   profile_background_color="d8ea1f"
+	#   profile_background_image_url="http://a3.twimg.com/profile_background_images/13427505/3237764_ef48ae407d_o.jpg"
+	#   profile_background_tile=false
+	#   profile_image_url="http://a3.twimg.com/profile_images/706711399/anselm_face_normal.jpg"
+	#   profile_link_color="1F98C7"
+	#   profile_sidebar_border_color="398bac"
+	#   profile_sidebar_fill_color="dd9869"
+	#   profile_text_color="211221"
+	#   protected=false
+	#   screen_name="anselm"
+	#   statuses_count=6086
+	#   time_zone="Pacific Time (US & Canada)"
+	#   url="http://hook.org"
+	#   utc_offset=-28800
+	#   verified=false
+	# }
+	#
+
+	def self.twitter_refresh_timeline(party,score=1)
 
 		twitter = self.twitter_start
 		provenance = "twitter"
@@ -597,112 +753,56 @@ class TwitterSupport
 		# other options: max_id, #page, #since
 		results = []
 		since_id = self.get_last_post(party,provenance)
-		list = twitter.user_timeline(:user_id=>party.uuid,:count=>20,:since_id=>since_id)
+ 
+		ActionController::Base.logger.info "refresh for #{party.title} since #{since_id}"
+		if since_id > 0
+			list = twitter.user_timeline(:user_id=>party.uuid,:count=>20,:since_id=>since_id)
+		else
+			list = twitter.user_timeline(:user_id=>party.uuid,:count=>20)
+		end
+		updated_party = false
+
+		# ignore the supplied score and use the one set at creation time for now TODO is this ok?
+		score = party.score
 
 		list.each do |twit|
-			ActionController::Base.logger.info "timeline - got a message #{twit.text}"
+
+			# update party information as well for convenience
+			# Often parties are "empty" and have no data at all - this is a way to fill them out.
+			if !updated_party
+				updated_party = true
+				self.save_party(
+						:provenance => "twitter",
+						:uuid => twit.user.id,
+						:title => twit.user.screen_name,
+						:location => twit["location"],
+						:description => twit.user.description
+						#:begins => Time.now
+						#:score => score
+						)
+			end
+
 			results << self.save_post(party,
 					:provenance => provenance,
 					:uuid => twit.id,
 					:title => twit.text,
 					:location => twit.user.location,
 					:begins => Time.parse(twit.created_at),
-					:score => 0
+					:score => score
 					)
+
+			# TODO peek into the tweets to find people in their social graph and upscore those
+
 		end
 
 		return results
 	end
 
-	def self.twitter_get_timelines(parties)
+	def self.twitter_get_profiles_and_timelines(parties,score=1)
 		parties.each do |party|
-			self.twitter_refresh_timeline(party)
+			self.twitter_refresh_timeline(party,score)
 		end
 	end
-
-	##########################################################################################################
-	# collect direct messages to us
-	# turn off because we don't need it yet
-	# TODO - can we only get results newer than x please?
-	##########################################################################################################
-
-=begin
-	def self.twitter_get_replies
-		results = []
-		twitter = self.twitter_start
-		twitter.replies().each do |twit|
-			# build a model of the participants...
-			party = self.save_party(
-						:provenance => "twitter",
-						:uuid => twit.from_user_id,
-						:title => twit.from_user,
-						:location => twit["location"],
-						:score => 0
-						#:description => twit.user.description, TODO ( a separate query )
-						#:begins => Time.parse(twit.created_at) TODO ( a separate query )
-						)
-			# and the posts
-			results << self.save_post(party,
-						:provenance => "twitter",
-						:uuid => twit.id,
-						:title => twit.text,
-						:location => twit.user.location,
-						:begins => Time.parse(twit.created_at),
-						:score => 0
-						)
-		end
-		return results
-	end
-=end
-
-	##########################################################################################################
-	# twitter update a set of party profiles by tracing out friends given twitter ids
-	# TODO switch to yql later?
-	# use 'http://angel.makerlab.org/yql/twitter.user.profile.xml' as party;
-	# select * from party where id='anselm';
-	##########################################################################################################
-
-=begin
-	def self.twitter_update_friends_of_set(partyids)
-		twitter = self.twitter_start
-		partyids.each { |partyid| self.twitter_update_friends_of_party(twitter,partyid) }
-	end
-
-	def self.twitter_update_friends_of_party(twitter,partyid)
-		twitter.friends({:user_id=>partyid,:page=>0}).each do |v|
-			party = self.save_party(
-						:provenance => "twitter",
-						:uuid => v.id,
-						:title => v.screenname,
-						:location => v["location"],
-						:description => v.description,
-						:begins => Time.parse(v.created_at),
-						:score => 1
-						)
-		end
-	end
-=end
-
-	##########################################################################################################
-	# twitter get an updated timeline using yql and in this case friendfeed
-	# i decided this was a bad idea because what if person x is not on friendfeed? does this read through?
-	# TODO FINISH
-	# TODO we have to find a way to do this asynchronously or cap the returns
-	# use 'http://angel.makerlab.org/yql/twitter.user.timeline.xml' as ff;
-	# select * from ff where id='anselm';
-	##########################################################################################################
-
-=begin
-	def self.yql_twitter_update_timeline(partyname)
-		yql = "http://query.yahooapis.com/v1/public/yql?q="
-		schema = "use 'http://www.javarants.com/friendfeed/friendfeed.feeds.xml' as ff;"
-		query = "select * from ff where nickname='#{partyname}' and service='twitter';"
-		fragment = "#{schema}#{query}"
-		url = "#{yql}#{url_escape(fragment)}" # is ignored why? ;&format=json"
-		response = Hpricot.XML(open(url))
-		response_name = response.innerHTML.strip
-	end
-=end
 
 	##########################################################################################################
 	# yql get the timelines of a pile of people - this is a crude way of seeing somebodys own view of reality
@@ -770,5 +870,89 @@ class TwitterSupport
 		end
 
 	end
+
+
+=begin
+
+	##########################################################################################################
+	# collect direct messages to us
+	# turn off because we don't need it yet
+	# TODO - can we only get results newer than x please?
+	##########################################################################################################
+
+	def self.twitter_get_replies
+		results = []
+		twitter = self.twitter_start
+		twitter.replies().each do |twit|
+			# build a model of the participants...
+			party = self.save_party(
+						:provenance => "twitter",
+						:uuid => twit.from_user_id,
+						:title => twit.from_user,
+						:location => twit["location"],
+						:score => 0
+						#:description => twit.user.description, TODO ( a separate query )
+						#:begins => Time.parse(twit.created_at) TODO ( a separate query )
+						)
+			# and the posts
+			results << self.save_post(party,
+						:provenance => "twitter",
+						:uuid => twit.id,
+						:title => twit.text,
+						:location => twit.user.location,
+						:begins => Time.parse(twit.created_at),
+						:score => 0
+						)
+		end
+		return results
+	end
+
+	##########################################################################################################
+	# twitter update a set of party profiles by tracing out friends given twitter ids
+	# TODO switch to yql later?
+	# use 'http://angel.makerlab.org/yql/twitter.user.profile.xml' as party;
+	# select * from party where id='anselm';
+	##########################################################################################################
+
+	def self.twitter_update_friends_of_set(partyids)
+		twitter = self.twitter_start
+		partyids.each { |partyid| self.twitter_update_friends_of_party(twitter,partyid) }
+	end
+
+	def self.twitter_update_friends_of_party(twitter,partyid)
+		twitter.friends({:user_id=>partyid,:page=>0}).each do |v|
+			party = self.save_party(
+						:provenance => "twitter",
+						:uuid => v.id,
+						:title => v.screenname,
+						:location => v["location"],
+						:description => v.description,
+						:begins => Time.parse(v.created_at),
+						:score => 1
+						)
+		end
+	end
+
+	##########################################################################################################
+	# twitter get an updated timeline using yql and in this case friendfeed
+	# i decided this was a bad idea because what if person x is not on friendfeed? does this read through?
+	# TODO FINISH
+	# TODO we have to find a way to do this asynchronously or cap the returns
+	# use 'http://angel.makerlab.org/yql/twitter.user.timeline.xml' as ff;
+	# select * from ff where id='anselm';
+	##########################################################################################################
+
+	def self.yql_twitter_update_timeline(partyname)
+		yql = "http://query.yahooapis.com/v1/public/yql?q="
+		schema = "use 'http://www.javarants.com/friendfeed/friendfeed.feeds.xml' as ff;"
+		query = "select * from ff where nickname='#{partyname}' and service='twitter';"
+		fragment = "#{schema}#{query}"
+		url = "#{yql}#{url_escape(fragment)}" # is ignored why? ;&format=json"
+		response = Hpricot.XML(open(url))
+		response_name = response.innerHTML.strip
+	end
+
+=end
+
 
 end
