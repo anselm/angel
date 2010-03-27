@@ -1,6 +1,6 @@
 
 require 'dynamapper/geolocate.rb'
-require 'lib/twitter_support/twitter_aggregate.rb'
+require 'lib/aggregator/twitter_aggregate.rb'
 
 ############################################################################################
 #

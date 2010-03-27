@@ -6,8 +6,8 @@ require 'rubygems'
 require File.dirname(__FILE__) + "/../../config/environment"
 require 'json'
 require 'open-uri'
-require 'twitter_support/twitter_base.rb'
-require 'twitter_support/twitter_aggregate.rb'
+require 'aggregator/twitter_base.rb'
+require 'aggregator/twitter_aggregate.rb'
 require 'query_support.rb'
 require 'lib/settings.rb'
 

@@ -17,6 +17,6 @@ config.action_controller.perform_caching             = false
 config.action_mailer.raise_delivery_errors = false
 
 # This is supposed to force constant reload during dev but it fails
-# require_dependency RAILS_ROOT + "/lib/twitter_support/twitter_base.rb"
+# require_dependency RAILS_ROOT + "/lib/aggregator/twitter_base.rb"
 
 

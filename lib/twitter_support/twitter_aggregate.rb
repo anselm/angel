@@ -12,8 +12,8 @@
 # The aggregator avoids rate limits
 #
 
-require 'lib/twitter_support/twitter_base.rb'
-require 'lib/twitter_support/twitter_reap.rb'
+require 'lib/aggregator/twitter_base.rb'
+require 'lib/aggregator/twitter_reap.rb'
 
 class TwitterSupport
 
