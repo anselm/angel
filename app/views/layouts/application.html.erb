@@ -5,12 +5,14 @@
 <title>Angel</title>
 <%= stylesheet_link_tag 'scaffold' %>
 <%= javascript_include_tag :defaults %>
+<%= @map.header() if @map %>
 </head>
 <body>
-<%= render :partial => '/layouts/header' %>
-<%= @map.header() if @map %>
+<%= render :partial => '/layouts/banner' %>
 <div id="container">
 <%= yield  %>
+<%= render :partial => '/layouts/footer' %>
+</div>
+</body>
 <%= @map.tail() if @map %>
-<div id="footer"></div>
 </html>

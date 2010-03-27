@@ -17,8 +17,8 @@
 <% end %>
 welcome <%= link_to "home #{current_user.login}!", "/users/#{current_user.login}" %> |
 <%= link_to "signout", user_session_path, :method => :delete %> |
-<%= link_to "about", "/about" %>
 <% end %>
+<%= link_to "about", "/about" %>
 </div>
 <div style="clear:both"></div>
 <p style="color: green"><%= flash[:notice] %></p>
