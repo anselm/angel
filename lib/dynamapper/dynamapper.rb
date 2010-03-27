@@ -6,6 +6,7 @@ require 'lib/dynamapper/gmap.rb'
 # Dynamapper
 #
 # A google maps helper for rails
+# TODO I want associated javascript to be static not dynamic; means peeking at passed parameters instead
 #
 # This was written for call2action but was never used - it is public domain - anselm hook
 # 

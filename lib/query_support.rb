@@ -320,6 +320,8 @@ class QuerySupport
 		# TODO not wise to copy the database iterator to an array - try avoid this
 		#
 
+@limit = 10
+
 		results = []
 		results_length = 0
 		conditions = [ conditions.join(' AND ') ] + condition_arguments
