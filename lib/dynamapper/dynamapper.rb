@@ -174,7 +174,7 @@ class Dynamapper
    }
 </style>
 <script src="http://maps.google.com/maps?file=api&amp;v=2&amp;key=#{@apikey}" type="text/javascript"></script>
-<script src="/javascripts/dynamapper.js" type="text/javascript"></script>
+<script src="/dynamapper/dynamapper.js" type="text/javascript"></script>
 ENDING
   end
 

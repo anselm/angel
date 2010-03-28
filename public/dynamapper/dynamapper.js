@@ -86,7 +86,13 @@ function mapper_make_links_clickable(twitter,username) {
     }
     status = results.join(" ");
 
-    return '<a href="http://twitter.com/'+username+'">'+username+'</a> ' + status;
+    return '<div style="position:relative;border:1px solid red;width:95%;">'
+            + '<img style="position:absolute;right:-20px;top:0px;" src="/dynamapper/icons/media-skip-forward.png"></img>'
+            + '<a href="http://twitter.com/'+username+'">'+username+'</a> '
+            + status 
+            + "</div>"
+            ;
+
 }
 
 function relative_time(time_value) {
