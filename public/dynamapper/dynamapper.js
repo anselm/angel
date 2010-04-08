@@ -86,8 +86,8 @@ function mapper_make_links_clickable(twitter,username) {
     }
     status = results.join(" ");
 
-    return '<div style="position:relative;border:1px solid red;width:95%;">'
-            + '<img style="position:absolute;right:-20px;top:0px;" src="/dynamapper/icons/media-skip-forward.png"></img>'
+    return '<div style="position:relative;background:#aaaaff;width:95%;border:1px solid #ddddff;">'
+            + '<div style="position:absolute;right:-20px;top:0px;width:20px;height:20px;background:#aaaaff;"></div>'
             + '<a href="http://twitter.com/'+username+'">'+username+'</a> '
             + status 
             + "</div>"
@@ -488,7 +488,9 @@ function mapper_page_paint_text(blob) {
                 if( kind == "KIND_URL" ) glyph = glyph_url;
 
                 // Draw a list of features as well
-                var node = document.createElement('li');
+                var node = document.createElement('div');
+                node.style.cursor = "move";
+                node.id = "drag"+id;
                 if(node) {
 
                         if(kind == "KIND_URL" && urls_box != null) {
@@ -507,9 +509,41 @@ function mapper_page_paint_text(blob) {
                                 count_post++;
                         }
                 }
+
+// test
+node.originalLeft = node.style.left;
+node.originalTop = node.style.top;
+new Draggable(node,{ revert:mapper_drag_done, ghosting: true  });
+
 	}
         // alert("total urls,users,posts = " + count_url + " " + count_user + " " + count_post );
 }
+
+function mapper_drag_done(result) {
+  //alert(result.style.left + " -  " + result.style.top);
+  return true;
+}
+
+
+/// - figure out where the absolute drag target is
+/// - if absolute drag target is in the saved or match area then move it appropriately
+//      - make a copy into the new bucket ( such as into saved )
+//      - post a new object to the server with this state  ( an insert on this id - or just tag the item perhaps )
+//      - probably the reverse is true as well - when you pull out then retag
+//      - if two items are dragged overtop each other then thats a match
+//              - denote that match on the server
+//              - refresh that column on client
+//              - play a sound for fun
+//              - repaint scor
+//
+// - 
+
+
+
+
+
+
+
 
 ///
 /// Go ahead and paint the supplied set
