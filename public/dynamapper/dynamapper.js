@@ -186,6 +186,18 @@ function mapper_save_location(center) {
     x.value = center.lat();
     y.value = center.lng();
   }
+  var x = document.getElementById("note[lon]");
+  var y = document.getElementById("note[lat]");
+  if(x && y) {
+    x.value = center.lat();
+    y.value = center.lng();
+  }
+  var x = document.getElementById("note_lon");
+  var y = document.getElementById("note_lat");
+  if(x && y) {
+    x.value = center.lat();
+    y.value = center.lng();
+  }
   map_latitude = center.lat();
   map_longitude = center.lng();
 }

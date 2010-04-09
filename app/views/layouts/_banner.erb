@@ -9,9 +9,9 @@
 <%= link_to "new", "/notes/new" %> |
 <% if !current_user %>
 <%= link_to "signup", "/users/new" %> |
-<%= link_to "signin", new_user_session_path %>
+<%= link_to "signin", new_user_session_path %> |
 <% else %>
-<% if current_user.admin %>
+<% if current_user && current_user.admin %>
 <%= link_to "admin", "/admin_notes" %> |
 <%= link_to "users", "/users" %> |
 <% end %>

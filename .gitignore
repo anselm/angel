@@ -3,6 +3,7 @@ public/stylesheets/compiled/*
 notes
 .DS_Store
 public/text/*.pdf
+public/.DS_Store
 .svn
 solr/**/*
 log/*.log
