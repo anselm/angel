@@ -1,6 +1,6 @@
 <%
 
-# TODO use a form builder; such as from previous projects; for now this will conflate viewing and editing.
+# TODO later use a form builder; such as from previous projects; for now this will conflate viewing and editing.
 
 def form_text_field(form,name)
   return form.text_field(name) if @interactive == 1
@@ -23,6 +23,12 @@ def form_submit_field(form,name)
 end
 
 %>
+
+<style>
+.inputdialog { float:left; width:100px; }
+</style>
+
+<div id="map" style="float:right;width:400px;height:400px;border:3px solid red;"></div>
 
 <h2>Main Properties</h2>
 
@@ -47,6 +53,8 @@ end
 <% end %>
 <br>
 
+<% if current_user && current_user.admin %>
+
 <h2>Admin</h2>
 <label class='inputdialog'>kind </label>	<%= form_menu_field form,:kind,Note::KINDS %><br/>
 <label class='inputdialog'>uuid </label>	<%= form_text_field form,:uuid %><br/>
@@ -54,10 +62,13 @@ end
 <label class='inputdialog'>statebits </label>	<%= form_text_field form,:statebits %><br/>
 <label class='inputdialog'>score </label>	<%= form_text_field form,:score %><br/>
 <label class='inputdialog'>owner_id </label>	<%= form_text_field form,:owner_id %><br/>
-<label class='inputdialog'>&nbsp;</label>	<%= form_submit_field form,:Save %>
-<!-- tree depth set automatically
 <label class='inputdialog'>depth </label>	<%= form_text_field form,:depth %><br/>
- -->
+
+<% end %>
+
+<label class='inputdialog'>&nbsp;</label>	<%= form_submit_field form,:Save %><br/>
+
+<!--
 
 <h2>Permissions</h2>
 
@@ -88,7 +99,7 @@ Rules
 
 <h2>Attributes</h2>
 
-<!--
+<pre>
 	[x] [kind]					[value]
 	[x] [barometric pressure]	[12.5]
 	[x] [tag]					[blue]
@@ -98,7 +109,7 @@ Rules
 	[x] [phylum]				[phylum/cnidaria]
 	[x] [owns]					[linkto:12345#badger]
 	[x] [    ]                  [ ]
--->
+</pre>
 
 Rules
 <ul>
@@ -106,21 +117,19 @@ Rules
 <li>Allow removing of attributes [ if marked as such ]
 </ul> 
 
+-->
+
 <script>
 
 function draw_relation(flags,kind,value,sibling) {
-
 	var root = document.getElementById('parent');
 	root.innerHTML = html;
-
 	// flags can be { mandatory | unique }
 	if(!(flags & RELATION_FLAG_MANDATORY)) {
 		draw [x]
 	}
-
 //	draw [x] [] []
 //	draw [x] [] []
-
 }
 
 function draw_relations() {
