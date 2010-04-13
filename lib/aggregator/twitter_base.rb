@@ -298,7 +298,7 @@ class TwitterSupport
 				:title => title,
 				:description => description,
 				:location => location,
-				:score => score,
+				# :score => score, we don't want to do this - it blows away low scores...
 				:lat => lat,
 				:lon => lon,
 				:updated_at => Time.now	# IS THIS NEEDED? TODO this was failing verify

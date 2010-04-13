@@ -45,9 +45,21 @@ class TwitterSupport
 			ActionController::Base.logger.info "Query: Done collecting explicitly stated parties #{Time.now}"
 		end
 
+		#
+		# for all explicitly marked parties promote them to be 'watched' so that successive aggregator iterations will fetch them
+		#
+		if q[:parties]
+			q[:parties].each do |party|
+				ActionController::Base.logger.info "Query: promoting user #{party.title} to be watched more at #{Time.now}"
+				party.update_attributes(:score => 0)
+			end
+		end
+
+		#
 		# Get parties timelines immediately
 		# Since these calls may be batched later it is best to treat them as a batch request
 		# TODO if this accepts parties by name? then the above would not be needed at all - could verify this.
+		#
 
 		if q[:parties] && q[:parties].length > 0
 			# self.yql_twitter_get_timelines(q[:parties])  # TODO improve GEO support here

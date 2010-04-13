@@ -188,7 +188,7 @@ class QuerySupport
 		n = session[:n] = params[:n].to_f if params[:n]
 		e = session[:e] = params[:e].to_f if params[:e]
 
-		# get bounds optional approach
+		# get bounds with center (an alternative optional approach that is mutually exclusive with above and overrides it)
 		rad = params[:rad].to_f if params[:rad]
 		lon = params[:lon].to_f if params[:lon]
 		lat = params[:lat].to_f if params[:lat]
@@ -279,6 +279,7 @@ class QuerySupport
 
 		#
 		# Give aggregator an opportunity to flesh out parties if it can do so quickly
+		# Also - explicitly supplied parties may be marked for later observation here
 		#
 
 		TwitterSupport::aggregate_memoize(q,synchronous)
