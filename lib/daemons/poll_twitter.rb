@@ -9,7 +9,7 @@ require 'open-uri'
 require 'aggregator/twitter_base.rb'
 require 'aggregator/twitter_aggregate.rb'
 require 'query_support.rb'
-require 'lib/settings.rb'
+# require 'lib/settings.rb'
 
 platform = YAML.load(open(File.dirname(__FILE__) + "/../../config/platform.yml"))
 

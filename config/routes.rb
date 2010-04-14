@@ -7,6 +7,7 @@ ActionController::Routing::Routes.draw do |map|
   map.resource :user_session
   map.resources :users
   map.about 'about', :controller => 'index', :action => 'about'
+  map.status 'status', :controller => 'index', :action => 'status'
   map.signup 'signup', :controller => 'users', :action => 'new'
   map.signin 'signin', :controller => 'user_sessions', :action => 'new'
   map.signout 'signout', :controller => 'user_sessions', :action => 'destroy'

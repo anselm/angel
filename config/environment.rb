@@ -15,7 +15,20 @@ RAILS_GEM_VERSION = '2.1.2' unless defined? RAILS_GEM_VERSION
 # Bootstrap the Rails environment, frameworks, and default configuration
 require File.join(File.dirname(__FILE__), 'boot')
 
-require 'lib/settings'
+# read config
+
+SETTINGS = YAML::load(File.open("config/settings.yml"))
+
+#.symbolize_keys
+
+SETTINGS.each do |k,v|
+  sym = k.respond_to?(:to_sym) ? k.to_sym : k
+  SETTINGS[sym] = v
+  SETTINGS.delete(k) unless k == sym
+  puts "reading settings #{k} #{v}"
+end
+
+
 
 Rails::Initializer.run do |config|
   # Settings in config/environments/* take precedence over those specified here.

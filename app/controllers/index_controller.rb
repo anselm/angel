@@ -107,6 +107,32 @@ class IndexController < ApplicationController
 
   end
 
+  #
+  # aggregation engine status overview
+  #
+  def status
+
+    @map = nil
+    @kind = params[:kind] || nil
+    @anchor = params[:anchors] || false
+    @offset = params[:offset] || 0
+    @limit = params[:limit] || 500
+    @score = 1
+
+    # fetch most recent posts with a specific limit and offset based on supplied parameters
+    arguments = { :order => "updated_at DESC", :offset => @offset, :limit => @limit }
+
+    # fetch only posts that are about people if the parameter "kind" is specified
+    arguments[:conditions] = [ "kind = ?", @kind ] if @kind
+
+    # fetch only posts that are about anchors if the parameter "anchor" is specified
+    arguments[:conditions] = [ "kind = ? AND score <= ?", Note::KIND_USER, @score ] if @anchor
+
+    # get posts
+    @activity = Note.find(:all,arguments)
+
+  end
+
   def about
     # render :layout => 'static'
     @map = nil
