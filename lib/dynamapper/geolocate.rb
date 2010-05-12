@@ -8,6 +8,7 @@ require 'json'
 class Dynamapper
 
   def self.geolocate(text)
+    return 0,0,0 if !text || text.length < 3 
     name = SETTINGS[:site_metacarta_userid]
     password = SETTINGS[:site_metacarta_pass]
     key = SETTINGS[:site_metacarta_key]
@@ -18,7 +19,7 @@ class Dynamapper
 
   # return latitude,longitude,kilometers or return a point off the coast of africa that means nil
   def self.geolocate_via_metacarta(text,name,password,key)
-    return 0,0,0 if !text
+    return 0,0,0 if !text || text.length < 3 
     text = URI.escape(text, Regexp.new("[^#{URI::PATTERN::UNRESERVED}]"))
     host = "ondemand.metacarta.com"
     path = "/webservices/GeoTagger/JSON/basic?version=1.0.0&doc=#{text}"
@@ -46,7 +47,7 @@ class Dynamapper
 
   # return latitude,longitude,kilometers or return a point off the coast of africa that means nil
   def self.geolocate_via_placemaker(apikey,text)
-    return 0,0,0 if !text
+    return 0,0,0 if !text || text.length < 3 
     url = URI.parse('http://wherein.yahooapis.com/v1/document')
     args = {'documentContent'=> text,
             'documentType'=>'text/plain',

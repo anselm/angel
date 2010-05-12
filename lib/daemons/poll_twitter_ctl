@@ -1,4 +1,5 @@
 #!/usr/bin/env ruby
+
 require 'rubygems'
 require 'daemons'
 require 'yaml'
@@ -10,11 +11,9 @@ class Hash
   end
 end
 
-options = YAML.load(
-  ERB.new(
-  IO.read(
-  File.dirname(__FILE__) + "/../../config/daemons.yml"
-  )).result).with_symbols!
+ROOT = File.expand_path(File.dirname(__FILE__)+'/../../')
+
+options = YAML.load( ERB.new( IO.read( File.dirname(__FILE__) + "/../../config/daemons.yml" )).result).with_symbols!
 options[:dir_mode] = options[:dir_mode].to_sym
 
 Daemons.run File.dirname(__FILE__) + '/poll_twitter.rb', options

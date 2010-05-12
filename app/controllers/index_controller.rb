@@ -114,10 +114,10 @@ class IndexController < ApplicationController
 
     @map = nil
     @kind = params[:kind] || nil
-    @anchor = params[:anchors] || false
+    @anchor = params[:anchor] || false
     @offset = params[:offset] || 0
     @limit = params[:limit] || 500
-    @score = 1
+    @score = params[:score] || 0 
 
     # fetch most recent posts with a specific limit and offset based on supplied parameters
     arguments = { :order => "updated_at DESC", :offset => @offset, :limit => @limit }

@@ -238,14 +238,17 @@ class TwitterSupport
 		provenance = args[:provenance]
 		uuid = args[:uuid]
 		title = args[:title]
-		location = args[:location]
-		description = args[:description]
+		location = args[:location] || ""
+		description = args[:description] || ""
 		last_login_at = args[:begins]
 		begins = args[:begins]
-		fallback_lat = args[:fallback_lat]
-		fallback_lon = args[:fallback_lon]
-		fallback_rad = args[:fallback_rad]
-		score = args[:score] || 99 # a lower score means it is more important to users of the site
+		fallback_lat = args[:fallback_lat] || 0
+		fallback_lon = args[:fallback_lon] || 0
+		fallback_rad = args[:fallback_rad] || 0
+		lat = args[:lat] || 0
+		lon = args[:lon] || 0
+		rad = args[:rad] || 0
+		score = args[:score]
 
 		# do we have a party like this already?
 		party = args[:party] if args[:party]
@@ -255,9 +258,10 @@ class TwitterSupport
 
 		# locate the party once
 		# TODO improve this later to periodically check since the party may move.
-		lat = lon = rad = 0
 		if !party
-			lat,lon,rad = Dynamapper.geolocate(location)
+			if lat == 0 && lon == 0
+				lat,lon,rad = Dynamapper.geolocate(location)
+			end
 			if !lat && !lon
 				lat = fallback_lat if fallback_lat
 				lon = fallback_lon if fallback_lon
@@ -286,7 +290,7 @@ class TwitterSupport
 				:updated_at => Time.now
 				)
 			party.save
-			ActionController::Base.logger.info "Saved a new party with title #{title}"
+			ActionController::Base.logger.info "Saved a new party with title #{title} and score #{score}"
 		else
 			if lat && lon && lat < 0.0 || lat > 0.0 || lon < 0.0 || lon > 0.0
 				# party.update_attributes(:lat => lat, :lon => lon )
@@ -294,11 +298,25 @@ class TwitterSupport
 				lat = party.lat || 0.0
 				lon = party.lon || 0.0
 			end
+
+			# scores can only improve not get worse
+			score = party.score if party.score < score
+
+			# title can only improve TODO not goodly done 
+			title = party.title if party.title != "unresolved"
+
+			# descr can only improve
+			description = party.description if party.description && party.description.length > 0
+
+			# location ...
+			location = party.location if party.location && party.location.length > 0
+
+			# save changes
 			party.update_attributes(
 				:title => title,
 				:description => description,
 				:location => location,
-				# :score => score, we don't want to do this - it blows away low scores...
+				:score => score,
 				:lat => lat,
 				:lon => lon,
 				:updated_at => Time.now	# IS THIS NEEDED? TODO this was failing verify
@@ -306,7 +324,7 @@ class TwitterSupport
 
 			# TODO if a party had a geolocation and it changed we may want to post an empty note with that fact
 
-			ActionController::Base.logger.info "Updated a party with title #{title}"
+			ActionController::Base.logger.info "Updated a party with title #{title} and score #{score}"
 		end
 
 		return party
@@ -324,16 +342,16 @@ class TwitterSupport
 		provenance = args[:provenance]	
 		uuid = args[:uuid]
 		title = args[:title]
-		location = args[:location]
 		description = args[:description]
+		location = args[:location]
+		lat = args[:lat] || 0
+		lon = args[:lon] || 0
+		rad = args[:rad] || 0
 		#last_login_at = args[:begins]
 		begins = args[:begins]
-		fallback_lat = args[:fallback_lat]
-		fallback_lon = args[:fallback_lon]
-		fallback_rad = args[:fallback_rad]
 		score = 0
-		score = args[:score] if args[:score]
 		score = party.score if party
+		score = args[:score] if args[:score]
 
 		# Do we have this post already?
 		note = Note.find(:first, :conditions => { 
@@ -342,9 +360,8 @@ class TwitterSupport
 						:kind => kind
 						 })
 
-		# geolocate - once only for now
-		lat = lon = rad = 0
-		if !note
+		# try geolocate based on content if new post only and only if no location supplied
+		if !note && !lat && !lon
 			lat,lon,rad = Dynamapper.geolocate(title)
 			if !lat && !lon 
 				lat = party.lat
@@ -352,31 +369,16 @@ class TwitterSupport
 				rad = party.rad
 				ActionController::Base.logger.info "Geolocated a post using user data *********** #{lat} #{lon}"
 			end
-			if lat == 0 && lon == 0
-				lat = fallback_lat if fallback_lat
-				lon = fallback_lon if fallback_lon
-				ActionController::Base.logger.info "Geolocated a post using fallback data *********** #{lat} #{lon}"
-			else
-				ActionController::Base.logger.info "Lat and lon are not zero #{lat} #{lon}"
-				ActionController::Base.logger.info "Lat and lon are not zero #{fallback_lat} #{fallback_lon}"
-			end
 			ActionController::Base.logger.info "Geolocated a post #{uuid} to #{lat},#{lon},#{rad} ... #{title}"
 		end
 
 		# update note?
 		if note
-
-			if lat > 0.0 || lat < 0.0 || lon > 0.0 || lon < 0.0
-				note.update_attributes( :lat => lat, :lon => lon, :rad => rad )
-			end
-
 			ActionController::Base.logger.info "Note already found #{uuid} #{title}"
-			return "Note already found #{uuid} #{title}"
+			return note
 		end
 
 		# new note?
-
-		# for now test turn of assertion catching because there's no point to silently failing ( but leave the transaction block on )
 		#begin
 		Note.transaction do
 			note = Note.new(
@@ -437,7 +439,7 @@ class TwitterSupport
 	# get parties directly from twitter - later will switch to yql but this is good enough
 	# note that the twitter assigned id is not always the same as the screen name and the screen name can change
 	# TODO should not bang on twitter so much
-	def self.twitter_get_parties(names_or_ids)
+	def self.twitter_get_parties(names_or_ids,score=99)
 		results = []
 		twitter = twitter_start
 		limit = self.twitter_get_remaining_hits
@@ -456,7 +458,7 @@ class TwitterSupport
 					:location => blob["location"],
 					:description => blob.description,
 					:begins => Time.parse(blob.created_at),
-					:score => 0
+					:score => score
 					)
 			results << party if party
 		end
@@ -507,7 +509,7 @@ class TwitterSupport
 	# verified=false
 	#
 
-	def self.twitter_update_parties(parties)
+	def self.twitter_update_parties(parties,score = 99)
 		results = []
 		twitter = twitter_start
 		limit = self.twitter_get_remaining_hits
@@ -526,7 +528,7 @@ class TwitterSupport
 					:location => blob["location"],
 					:description => blob.description,
 					:begins => Time.parse(blob.created_at),
-					:score => 0
+					:score => score
 					)
 			results << party if party
 		end
@@ -543,7 +545,7 @@ class TwitterSupport
 	# TODO manual updated_at? for some reason this has to be done explicity - note that we rely on this behavior - and it is implicit
 	##########################################################################################################
 
-	def self.twitter_get_friends_of_party(twitter,party,results,limit,score=1)
+	def self.twitter_get_friends_of_party(twitter,party,results,limit,score=99)
 		old = 4.hours.ago
 		# TODO always reget this for now because i was concerned about missing updates - re-enable later and test
 		if false && party.updated_at > old  # if updated at time is bigger(newer) than 4 hours agos bigness then skip
@@ -575,7 +577,7 @@ class TwitterSupport
 		return limit
 	end
 
-	# this is deprecated - it doesn't get very may friends
+	# this is deprecated - it doesn't get very many friends - only a dozen or so - the below is better
 	def self.twitter_get_friends(parties,score=1)
 		twitter = twitter_start
 		results = []
@@ -587,20 +589,19 @@ class TwitterSupport
 		return results
 	end
 
-	# this is preferred - get ids and then later get actual parties
-	def self.twitter_get_friends_ids(parties,score=1) 
+	# this is preferred - get ids and then later get actual parties - even if incomplete now is better
+	def self.twitter_get_friends_ids(parties,score=99) 
 		twitter = twitter_start
 		results = []
 		limit = self.twitter_get_remaining_hits
 		return if limit < 1
 		time = Time.now
 		parties.each do |party|
-			# ignore the supplied score and make this party score one further than the score of its parent TODO is ok?
-			score = party.score
 			twitter.friend_ids({:user_id => party.uuid, :page=>1}).each do |blob|
 				party2 = self.save_party(
 					:provenance => "twitter",
-					:uuid => blob.id,
+					:title => 'unresolved',
+					:uuid => "#{blob}",
 					:begins => time,
 					:score => score
 					)
@@ -609,6 +610,118 @@ class TwitterSupport
 		end
 	end
 
+	# this is perhaps best - just get a round up of friends and their most recent activity
+	# it should return a few thousand and their last event
+	# TODO I am concerned that if friendships break I am losing that information here.
+	# TODO also I am not actually collecting their post
+	def self.twitter_get_friends_most_recent_activity(parties,score=99) 
+		twitter = twitter_start
+
+		parties.each do |party|
+
+			limit = self.twitter_get_remaining_hits
+			return if limit < 1
+			time = Time.now
+
+          		ActionController::Base.logger.info "Aggregate::friends_recent_activity starting for #{party.title}"
+
+			count = 0
+			# cursor = -1
+			cursor = 0
+			results = twitter.friends(:user_id => party.uuid, :page => cursor)
+			self.twitter_deal_with_these_friends_recent_activity(party,results,score)
+			count = count + results.length
+
+          		ActionController::Base.logger.info "Aggregate::friends_recent_activity got #{count} people so far"
+
+			while(results.length > 0 && count < 500)
+				# cursor = results.next_cursor
+				cursor = cursor + 1
+				results = twitter.friends(:user_id => party.uuid, :page => cursor)
+				puts "at count #{cursor} we see #{results[0].name}"
+				self.twitter_deal_with_these_friends_recent_activity(party,results,score)
+				count = count + results.length
+          			ActionController::Base.logger.info "Aggregate::friends_recent_activity got #{count} people so far"
+			end	
+		end
+	end
+
+=begin
+XXX HERE IS WHAT WE ARE GETTING XXX
+<#Hashie::Mashi
+ contributors_enabled=false
+ created_at="Sat Jul 14 16:09:55 +0000 2007"i
+ description=""
+ favourites_count=6
+ followers_count=561
+ following=true
+ friends_count=445
+ geo_enabled=true
+ id=7473062
+ lang="en"
+ location="Grand Rapids, MI, USA"
+ name="George"
+ notifications=false
+ profile_background_color="9ae4e8"
+ profile_background_image_url="http://s.twimg.com/a/1273086425/images/themes/theme1/bg.png" profile_background_tile=false
+ profile_image_url="http://a3.twimg.com/profile_images/302435511/674128734_d61cc51275_s_normal.jpg"
+ profile_link_color="0000ff"
+ profile_sidebar_border_color="87bc44" profile_sidebar_fill_color="e0ff92" profile_text_color="000000" protected=false
+ screen_name="mixedfeelings"
+ status=<#Hashie::Mash contributors=nil coordinates=nil created_at="Tue May 11 16:18:36 +0000 2010" favorited=false
+ geo=<#Hashie::Mash coordinates=[47.674177, -122.304238] type="Point"> 
+ id=13796535764 in_reply_to_screen_name=nil in_reply_to_status_id=nil in_reply_to_user_id=nil place=nil
+ source="<a href=\"http://www.atebits.com/\" rel=\"nofollow\">Tweetie</a>"
+ text="Wearing my punkest t-shirt to get grimy for 3 days on a train." truncated=false>
+ statuses_count=3816 time_zone="Eastern Time (US & Canada)" url="http://www.g-rad.org" utc_offset=-18000 verified=false>
+=end
+
+	def self.twitter_deal_with_these_friends_recent_activity(party,results,score=99)
+
+		if party && results && results.length > 0
+
+			results.each do |blob|
+
+				# get location
+				lat = 0
+				lon = 0
+				if(blob.status.geo != nil)
+					lat = blob.status.geo.coordinates[0]
+					lon = blob.status.geo.coordinates[1]
+				end
+
+ 				ActionController::Base.logger.info "Friend of #{party.title}: #{blob.screen_name} at LOC #{blob.geo} #{blob.status.geo} #{lat} #{lon}"
+
+				# save new party
+				party2 = self.save_party(
+					:provenance => "twitter",
+					:uuid => blob.id,
+					:title => blob.screen_name,
+					:location => blob["location"],
+                                        :lat => lat,
+                                        :lon => lon,
+					:description => blob.description,
+					:begins => Time.parse(blob.created_at),
+					:score => score
+					)
+
+				# establish a link between parties where party2 is an esteemed friend of party1
+				party.relation_add(Note::RELATION_FRIEND,1,party2.id)
+
+				# save post associated with new party
+                        	post = self.save_post(party2,
+                                        :provenance => "twitter",
+                                        :uuid => blob.status.id,
+                                        :title => blob.status.text,
+                                        :location => blob.location,
+                                        :lat => lat,
+                                        :lon => lon,
+                                        :begins => Time.parse(blob.status.created_at),
+                                        :score => score
+                                        )
+			end
+		end
+	end
 	##########################################################################################################
 	# collect results from twitter search that might interest us; location,rad,topic.
 	# geolocate posts here if they don't have any better details
@@ -617,7 +730,7 @@ class TwitterSupport
 	# TODO slightly worried that a bad rad might be passed in
 	##########################################################################################################
 
-	def self.twitter_search(terms,map_s,map_w,map_n,map_e)
+	def self.twitter_search_unused(terms,map_s,map_w,map_n,map_e,score=99)
 
 		ActionController::Base.logger.info "Searching for #{terms.join(' ')} near #{map_s} #{map_w} #{map_n} #{map_e}"
 
@@ -664,25 +777,28 @@ class TwitterSupport
 						:uuid => twit.from_user_id,
 						:title => twit.from_user,
 						:location => twit["location"],
-						:fallback_lat => lat,
-						:fallback_lon => lon,
-						:fallback_rad => rad,
-						:score => 0
+						:score => score
 						#:description => twit.user.description, TODO ( a separate query )
 						#:begins => Time.parse(twit.created_at) TODO ( a separate query )
 						)
 
 			# and the posts
+			lat = 0
+			lon = 0
+			if twit["geo"] && twit["geo"]["coordinates"]
+				lat = twit["geo"]["coordinates"][0]
+				lon = twit["geo"]["coordinates"][1]
+			end
 			post = self.save_post(party,
 						:provenance => provenance,
 						:uuid => twit.id,
 						:title => twit.text,
 						:location => twit["location"],
-						:fallback_lat => lat,
-						:fallback_lon => lon,
-						:fallback_rad => rad,
+						:lat => lat,
+						:lon => lon,
+						:rad => rad,
 						:begins => Time.parse(twit.created_at),
-						:score => 1
+						:score => score
 						)
 
 			parties << party
@@ -739,7 +855,7 @@ class TwitterSupport
 	# }
 	#
 
-	def self.twitter_refresh_timeline(party,score=1)
+	def self.twitter_refresh_timeline(party,score=99)
 
 		twitter = self.twitter_start
 		provenance = "twitter"
@@ -753,7 +869,8 @@ class TwitterSupport
 		# other options: max_id, #page, #since
 		results = []
 		since_id = self.get_last_post(party,provenance)
- 
+
+begin 
 		ActionController::Base.logger.info "refresh for #{party.title} since #{since_id}"
 		if since_id > 0
 			list = twitter.user_timeline(:user_id=>party.uuid,:count=>20,:since_id=>since_id)
@@ -761,11 +878,23 @@ class TwitterSupport
 			list = twitter.user_timeline(:user_id=>party.uuid,:count=>20)
 		end
 		updated_party = false
-
+rescue
+  ActionController::Base.logger.info "bad - something broken with authentication"
+  return
+end
+  
 		# ignore the supplied score and use the one set at creation time for now TODO is this ok?
 		score = party.score
 
 		list.each do |twit|
+
+			lat = 0
+			lon = 0
+			if twit["geo"]
+				lat = twit["geo"]["coordinates"][0]
+				lon = twit["geo"]["coordinates"][1]
+			end
+			ActionController::Base.logger.info("LOCATION #{twit['geo']}")
 
 			# update party information as well for convenience
 			# Often parties are "empty" and have no data at all - this is a way to fill them out.
@@ -776,9 +905,9 @@ class TwitterSupport
 						:uuid => twit.user.id,
 						:title => twit.user.screen_name,
 						:location => twit["location"],
-						:description => twit.user.description
-						#:begins => Time.now
-						#:score => score
+						:description => twit.user.description,
+						#:begins => Time.now,
+						:score => score
 						)
 			end
 
@@ -787,6 +916,8 @@ class TwitterSupport
 					:uuid => twit.id,
 					:title => twit.text,
 					:location => twit.user.location,
+					:lat => lat,
+					:lon => lon,
 					:begins => Time.parse(twit.created_at),
 					:score => score
 					)
@@ -812,7 +943,7 @@ class TwitterSupport
 	# TODO yahoo api rate limits
 	##########################################################################################################
 
-	def self.yql_twitter_get_timelines(parties)
+	def self.yql_twitter_get_timelines_unused(parties,score=99)
 
 		terms = parties.collect { |n| "id='#{n.title}'" }
 		yql = "http://query.yahooapis.com/v1/public/yql?q="
@@ -857,14 +988,23 @@ class TwitterSupport
 				return
 			end
 
+			lat = 0
+			lon = 0
+			if goop["geo"] && goop["geo"]["coordinates"]
+				lat = goop["geo"]["coordinates"][0]
+				lon = goop["geo"]["coordinates"][1]
+			end
+
 			# save the post
 			self.save_post(party,{
 					:provenance => "twitter",
 					:uuid => uuid,
 					:title => title,
 					:location => party.location,
+					:lat => lat,
+					:lon => lon,
 					:begins => begins,
-					:score => 0
+					:score => score
 					})
 
 		end
@@ -880,7 +1020,7 @@ class TwitterSupport
 	# TODO - can we only get results newer than x please?
 	##########################################################################################################
 
-	def self.twitter_get_replies
+	def self.twitter_get_replies_unused(score = 99)
 		results = []
 		twitter = self.twitter_start
 		twitter.replies().each do |twit|
@@ -890,7 +1030,7 @@ class TwitterSupport
 						:uuid => twit.from_user_id,
 						:title => twit.from_user,
 						:location => twit["location"],
-						:score => 0
+						:score => score
 						#:description => twit.user.description, TODO ( a separate query )
 						#:begins => Time.parse(twit.created_at) TODO ( a separate query )
 						)
@@ -901,7 +1041,7 @@ class TwitterSupport
 						:title => twit.text,
 						:location => twit.user.location,
 						:begins => Time.parse(twit.created_at),
-						:score => 0
+						:score => score
 						)
 		end
 		return results
@@ -919,7 +1059,7 @@ class TwitterSupport
 		partyids.each { |partyid| self.twitter_update_friends_of_party(twitter,partyid) }
 	end
 
-	def self.twitter_update_friends_of_party(twitter,partyid)
+	def self.twitter_update_friends_of_party(twitter,partyid,score=99)
 		twitter.friends({:user_id=>partyid,:page=>0}).each do |v|
 			party = self.save_party(
 						:provenance => "twitter",
@@ -928,7 +1068,7 @@ class TwitterSupport
 						:location => v["location"],
 						:description => v.description,
 						:begins => Time.parse(v.created_at),
-						:score => 1
+						:score => score
 						)
 		end
 	end

@@ -25,12 +25,7 @@ class TwitterSupport
 
 		ActionController::Base.logger.info "Query: aggregation starting #{Time.now}"
 
-		map_s = q[:s]
-		map_w = q[:w]
-		map_n = q[:n]
-		map_e = q[:e]
-
-		# Get parties by name immediately
+		# Get explicitly named parties in full right now
 		# Since these calls may be batched later it is best to treat them as a batch request
 		# There is no freshness checking here - the caller should check for freshness themselves
 		# TODO Getting a party timeline ( below ) also effectively updates a party profile so it is not needed here.
@@ -57,7 +52,8 @@ class TwitterSupport
 
 		#
 		# Get parties timelines immediately
-		# Since these calls may be batched later it is best to treat them as a batch request
+		# Since getting a parties timeline also delivers a copy of the party - is the above redundant?
+ 		# Since these calls may be batched later it is best to treat them as a batch request
 		# TODO if this accepts parties by name? then the above would not be needed at all - could verify this.
 		#
 
@@ -71,7 +67,8 @@ class TwitterSupport
 
 		if synchronous && q[:parties] && q[:parties].length > 0
 			ActionController::Base.logger.info "Query: Collecting friends of parties now #{Time.now}"
-			q[:friends] = self.twitter_get_friends_ids(q[:parties])
+			q[:friends] = self.twitter_get_friends_most_recent_activity(q[:parties],1)
+			# q[:friends] = self.twitter_get_friends_ids(q[:parties],1)
 			# q[:friends] = self.twitter_get_friends(q[:parties]) # doesn't get enough friends
 			# q[:acquaintances] = self.twitter_get_friends(q[:friends])  # too expensive 
 			ActionController::Base.logger.info "Query: Done collecting friends of parties now #{Time.now}"
@@ -89,13 +86,17 @@ class TwitterSupport
 
 		# do a brute force twitter search if no parties
 		if synchronous && (!q[:partynames] || q[:partynames].length < 1) && q[:words] && q[:words].length > 0 
+			map_s = q[:s]
+			map_w = q[:w]
+			map_n = q[:n]
+			map_e = q[:e]
 			ActionController::Base.logger.info "query: using a general search strategy looking for #{q[:words].join(' ')} near #{map_s} #{map_w} #{map_n} #{map_e}"
 			self.twitter_search(q[:words],map_s,map_n,map_w,map_e) 
 		end
 
-		# for new people found during above searches - go ahead and collect their timelines and their friends - not done
-		if false
-		end
+		# mark any new persons that we found - we're interested in tracing out their social graph too
+		#if false
+		#end
 
 		ActionController::Base.logger.info "Query: aggregation of a set has finished updating external data sources at time #{Time.now}"
 
@@ -108,30 +109,30 @@ class TwitterSupport
 	#
 	def self.aggregate
 
-		# we're only interested in updating things that are older than an hour (for now)
-		old = 1.hours.ago
+		# we're only interested in updating things that are older than x
+		old = 1.minutes.ago
 
 		# select all persons and pick the ten least updated
 
 		ActionController::Base.logger.info "************* AGGREGATION: STARTING AT TIME #{Time.now} ************************* "
 
-		# select a handful of non-updated persons 
+		# select a handful of non-updated persons - taking the oldest of
 		score = 1
 		parties = Note.find(:all,:conditions => [ "kind = ? AND score <= ? AND updated_at < ?", Note::KIND_USER, score, old ],
 							:order => "updated_at ASC",
-							:limit => 10,
+							:limit => 100,
 							:offset => 0
 							)
-		# debugging
+
+		parties = Note.find(:all,:conditions => [ "kind = ? AND title= ?", Note::KIND_USER, 'anselm' ],
+							:order => "updated_at ASC",
+							:limit => 100,
+							:offset => 0
+							)
+
 		parties.each do | party |
 			ActionController::Base.logger.info "AGGREGATION: updating #{party.title} #{party.id} due to age #{party.updated_at}"
 		end
-
-		# get their profile AND timelines
-		self.twitter_get_profiles_and_timelines(parties,0)
-
-		# fetch their friends
-		self.twitter_get_friends_ids(parties,1)
 
 		# update these only
 		self.aggregate_memoize({ :parties => parties } ,true)

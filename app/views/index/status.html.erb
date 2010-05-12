@@ -16,6 +16,7 @@ td { valign:top }
 <table>
 <tr>
 <td>id</td>
+<td>uuid</td>
 <td>score</td>
 <td>kind</td>
 <td>Updated At</td>
@@ -27,12 +28,13 @@ td { valign:top }
 <% @activity.each do |note| %>
 <tr>
 <td width=5%><%= note.id %></td>
+<td width=5%><%= note.uuid %></td>
 <td width=5%><%= note.score %></td>
-<td width=5%><%= note.kind %></td>
-<td width=20%><%= seconds-note.updated_at %></td>
+<td width=10%><%= note.kind %></td>
+<td width=10%><%= seconds-note.updated_at %></td>
 <td width=10%><%= note.lat %></td>
 <td width=10%><%= note.lon %></td>
-<td width=30%><%= note.title %></td>
+<td width=40%><%= note.title %></td>
 </tr>
 <% end %>
 </table>
