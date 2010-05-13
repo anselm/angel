@@ -26,17 +26,27 @@ class TwitterSupport
 		ActionController::Base.logger.info "Query: aggregation starting #{Time.now}"
 
 		# Get explicitly named parties in full right now
-		# Since these calls may be batched later it is best to treat them as a batch request
+		# Since these calls may be batched later it is best to pass bundles to them now
 		# There is no freshness checking here - the caller should check for freshness themselves
-		# TODO Getting a party timeline ( below ) also effectively updates a party profile so it is not needed here.
+		# TODO Getting a party timeline ( below ) also effectively updates a party profile so it is not needed here?
 
 		if true && q[:partynames] && q[:partynames].length > 0
-			ActionController::Base.logger.info "Query: Collecting explicitly stated parties now #{q[:partynames]} #{Time.now}"
-			q[:parties] = self.twitter_get_parties(q[:partynames])
+			begin
+				ActionController::Base.logger.info "Query: Collecting explicitly stated parties now #{q[:partynames]} #{Time.now}"
+				q[:parties] = self.twitter_update_parties_by_name_or_uuid(q[:partynames])
+			rescue Exception => e
+				ActionController::Base.logger.info "Query: Exception 1 raised! #{e.class} #{e} #{Time.now}"
+				return
+			end
 			ActionController::Base.logger.info "Query: Done collecting explicitly stated parties now #{q[:partynames]} #{Time.now}"
 		elsif q[:parties] && q[:parties].length > 0
 			ActionController::Base.logger.info "Query: Collecting explicitly stated parties now #{q[:parties]} #{Time.now}"
-			self.twitter_update_parties(q[:parties])
+			begin
+				self.twitter_update_parties(q[:parties])
+			rescue Exception => e
+				ActionController::Base.logger.info "Query: Exception 2 raised! #{e.class} #{e} #{Time.now}"
+				return
+			end
 			ActionController::Base.logger.info "Query: Done collecting explicitly stated parties #{Time.now}"
 		end
 
@@ -52,26 +62,34 @@ class TwitterSupport
 
 		#
 		# Get parties timelines immediately
-		# Since getting a parties timeline also delivers a copy of the party - is the above redundant?
- 		# Since these calls may be batched later it is best to treat them as a batch request
-		# TODO if this accepts parties by name? then the above would not be needed at all - could verify this.
+		# This is different from the above because we are capturing their full history - but it is not critical
+		# TODO we could get parties by name and then remove the above
 		#
 
 		if q[:parties] && q[:parties].length > 0
 			# self.yql_twitter_get_timelines(q[:parties])  # TODO improve GEO support here
-			self.twitter_get_profiles_and_timelines(q[:parties])
+			begin
+				self.twitter_get_profiles_and_timelines(q[:parties])
+			rescue Exception => e
+				ActionController::Base.logger.info "Query: Exception 3 raised! #{e.class} #{e} #{Time.now}"
+				return
+			end
 		end
 
 		# get parties friends
 		# It is the callers responsibility to make sure these are in need of updating
 
 		if synchronous && q[:parties] && q[:parties].length > 0
-			ActionController::Base.logger.info "Query: Collecting friends of parties now #{Time.now}"
-			q[:friends] = self.twitter_get_friends_most_recent_activity(q[:parties],1)
-			# q[:friends] = self.twitter_get_friends_ids(q[:parties],1)
-			# q[:friends] = self.twitter_get_friends(q[:parties]) # doesn't get enough friends
-			# q[:acquaintances] = self.twitter_get_friends(q[:friends])  # too expensive 
-			ActionController::Base.logger.info "Query: Done collecting friends of parties now #{Time.now}"
+			begin
+				ActionController::Base.logger.info "Query: Collecting friends of parties now #{Time.now}"
+				q[:friends] = self.twitter_get_friends_most_recent_activity(q[:parties],1)
+				# q[:friends] = self.twitter_get_friends_ids(q[:parties],1)
+				# q[:acquaintances] = self.twitter_get_friends_most_recent_activity(q[:friends],2)
+				ActionController::Base.logger.info "Query: Done collecting friends of parties now #{Time.now}"
+			rescue Exception => e
+				ActionController::Base.logger.info "Query: Exception 4 raised! #{e.class} #{e} #{Time.now}"
+				return
+			end
 		end
 
 		# get parties friends timelines - no real reason to do this since aggregation will catch it on successive pass
@@ -104,37 +122,43 @@ class TwitterSupport
 	end
 
 	#
+	# Background Aggregation Strategy May 10 2010
+	#
+	# The current aggregation strategy is to
+	#	1) Aggregate persons with low scores
+	#	2) Aggregate persons with low scores if they are old
+	#	3) Aggregate persons with low scores if they are old and from oldest to youngest - guaranteeing a round robin of all
+	#
+	# Aggregation means
+	#	1) Collect their timeline
+	#	2) Collect their friends
+	#	2) Collect their friends by collecting their friends with their friends most recent tweet and location
+	#
+	# In the future we could
+	#	1) Weigh the social graph outwards from the anchors
+	#	2) Provide subjective weighting of the social graph depending on who you asked for as a root
+	#	3) Do these kinds of weighting operations as background tasks
+	#	4) Do location lookups as background tasks
+	#	5) Parallelize queries in general - I think the background aggregation would be faster if parallelized
+	#	6) Further work to block interactive queries out to twitter if we know that our local content is fairly recent
+	#	7) Should weight people by the number of anchors they are connected to!
+
+
 	# Aggregate a handful more people ( the core aggregation algorithms request groups at a time so this is best )
 	# Call this from a cron or long lived thread
 	#
 	def self.aggregate
 
-		# we're only interested in updating things that are older than x
-		old = 1.minutes.ago
-
-		# select all persons and pick the ten least updated
 
 		ActionController::Base.logger.info "************* AGGREGATION: STARTING AT TIME #{Time.now} ************************* "
 
-		# select a handful of non-updated persons - taking the oldest of
 		score = 1
+		old = 1.minutes.ago
 		parties = Note.find(:all,:conditions => [ "kind = ? AND score <= ? AND updated_at < ?", Note::KIND_USER, score, old ],
 							:order => "updated_at ASC",
 							:limit => 100,
 							:offset => 0
 							)
-
-		parties = Note.find(:all,:conditions => [ "kind = ? AND title= ?", Note::KIND_USER, 'anselm' ],
-							:order => "updated_at ASC",
-							:limit => 100,
-							:offset => 0
-							)
-
-		parties.each do | party |
-			ActionController::Base.logger.info "AGGREGATION: updating #{party.title} #{party.id} due to age #{party.updated_at}"
-		end
-
-		# update these only
 		self.aggregate_memoize({ :parties => parties } ,true)
 
 		ActionController::Base.logger.info "************ AGGREGATION: DONE AT TIME #{Time.now} ***************************** "

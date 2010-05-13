@@ -3,7 +3,7 @@ class AdminNotesController < ApplicationController
   layout "admin"
   active_scaffold :note do |config|
     config.label = '<a href="/admin_users">Users</a> Notes <a href="/admin_relations">Relations</a>'
-    config.columns = [:score, :title, :kind, :link, :description, :lon, :lat, :rad, :tagstring ]
+    config.columns = [:id, :score, :owner_id, :title, :kind, :link, :description, :lon, :lat, :rad, :tagstring ]
     #config.ignore_columns.add [ :created_at, :updated_at ]
     list.sorting = {:updated_at => 'ASC'}
     columns[:title].label = "Title"
