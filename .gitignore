@@ -6,6 +6,7 @@ public/text/*.pdf
 public/.DS_Store
 .svn
 solr/**/*
+log/*
 log/*.log
 tmp/**/*
 doc/api
