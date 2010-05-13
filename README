@@ -1,4 +1,20 @@
 ===============
+HOW TO RUN
+===============
+
+I use the swiftriver daemons approach from http://wiki.github.com/ajturner/swiftriver/installation
+
+You can kick off the polling daemons in lib/daemons by running:
+
+    RAILS_ENV=development
+    script/daemons start
+
+OR
+
+    RAILS_ENV=development
+    ruby lib/daemons/poll_twitter_ctl start
+
+===============
 HOW TO INSTALL
 ===============
 

@@ -242,9 +242,6 @@ class TwitterSupport
 		description = args[:description] || ""
 		last_login_at = args[:begins]
 		begins = args[:begins]
-		fallback_lat = args[:fallback_lat] || 0
-		fallback_lon = args[:fallback_lon] || 0
-		fallback_rad = args[:fallback_rad] || 0
 		score = args[:score] || 0
 		lat = args[:lat] || 0
 		lon = args[:lon] || 0
@@ -257,25 +254,36 @@ class TwitterSupport
 			party = Note.find(:first, :conditions => { :provenance => provenance, :uuid => uuid.to_s, :kind => kind })
 		end
 
-		# if location is supplied then use it
+		# if possibly a lon,lat is supplied then use it always
 		if geo && geo.geo && geo.geo.coordinates
 			lat = geo.geo.coordinates[0]
 			lon = geo.geo.coordinates[1]
 		end
 
-		# location slight hack : interleave a call to third party location service now in order to ease load on twitter aggregation 
-		if !party && !lat && !lon
-			lat,lon,rad = Dynamapper.geolocate(location)
-			if !lat && !lon
-				lat = fallback_lat if fallback_lat
-				lon = fallback_lon if fallback_lon
-				ActionController::Base.logger.info "Geolocated a party using fallback *********** #{lat} #{lon}"
-			end
-			ActionController::Base.logger.info "Geolocated a party #{title} to #{lat},#{lon},#{rad} ... #{location}"
+		# in ruby zero is not 0
+		if lat < 0.0 || lat > 0.0 || lon < 0.0 || lon > 0.0
+		else
+			lat = 0.0
+			lon = 0.0
 		end
-	
-puts "aggregate::base::save_party #{title} loc=#{location} lat=#{lat} lon=#{lon}"
-		
+
+		# use parties old location preferentially for now
+		if party && lon == 0.0 && lat == 0.0
+			lat = party.lat || 0.0
+			lon = party.lon || 0.0
+		end
+
+		# if no lon,lat and party is new and there is a location string then try get lon,lat from that
+		if lat == 0.0 && lon = 0.0 && location && location.length > 0 # && (!party || party.location != location)
+			lat,lon,rad = Dynamapper.geolocate(location)
+			p "calling dynamapper for #{location} and got #{lat} and #{lon}"
+		end
+
+		ActionController::Base.logger.info "Geolocated a party #{title} to #{lat},#{lon},#{rad} ... #{location}"
+		puts "Geolocated a party #{title} to #{lat},#{lon},#{rad} ... #{location}"
+
+ puts "SLOWNESS ABOUT TO SAVE #{Time.now.to_f}"
+
 		# add the party if new or just update features
 		if !party
 			party = Note.new(
@@ -297,14 +305,8 @@ puts "aggregate::base::save_party #{title} loc=#{location} lat=#{lat} lon=#{lon}
 				)
 			party.save
 			ActionController::Base.logger.info "Saved a new party with title #{title} and score #{score}"
+			puts "Saved a new party with title #{title} and score #{score}"
 		else
-			if lat && lon && lat < 0.0 || lat > 0.0 || lon < 0.0 || lon > 0.0
-				# party.update_attributes(:lat => lat, :lon => lon )
-			else
-				lat = party.lat || 0.0
-				lon = party.lon || 0.0
-			end
-
 			# scores can only improve not get worse
 			score = party.score if party.score < score
 
@@ -315,7 +317,7 @@ puts "aggregate::base::save_party #{title} loc=#{location} lat=#{lat} lon=#{lon}
 			description = party.description if party.description && party.description.length > 0
 
 			# location ...
-			location = party.location if party.location && party.location.length > 0
+			location = party.location if party.location && party.location.length > 0 && (!location || location.length < 1 )
 
 			# save changes
 			party.update_attributes(
@@ -329,9 +331,11 @@ puts "aggregate::base::save_party #{title} loc=#{location} lat=#{lat} lon=#{lon}
 				)
 
 			# TODO if a party had a geolocation and it changed we may want to post an empty note with that fact
-
 			ActionController::Base.logger.info "Updated a party with title #{title} and score #{score}"
+			puts "Updated a party with title #{title} and score #{score}"
 		end
+
+ puts "SLOWNESS DONE SAVE #{Time.now.to_f}"
 
 		return party
 
@@ -367,24 +371,40 @@ puts "aggregate::base::save_party #{title} loc=#{location} lat=#{lat} lon=#{lon}
 						:kind => kind
 						 })
 
-                # if location is supplied then use it
+                # use explicitly supplied location always
                 if geo != nil && geo.geo && geo.geo.coordinates
                         lat = geo.geo.coordinates[0]
                         lon = geo.geo.coordinates[1]
                 end
 
-
-		# try geolocate based on content if new post only and only if no location supplied
-		if !note && !lat && !lon
-			lat,lon,rad = Dynamapper.geolocate(title)
-			if !lat && !lon 
-				lat = party.lat
-				lon = party.lon
-				rad = party.rad
-				ActionController::Base.logger.info "Geolocated a post using user data *********** #{lat} #{lon}"
-			end
-			ActionController::Base.logger.info "Geolocated a post #{uuid} to #{lat},#{lon},#{rad} ... #{title}"
+		# in ruby zero is not 0
+		if lat < 0.0 || lat > 0.0 || lon < 0.0 || lon > 0.0
+		else
+			lat = 0.0
+			lon = 0.0
 		end
+
+		# if no location given then try use previous if any
+		if note && lat == 0.0 && lon == 0.0
+			lat = note.lat || 0.0
+			lon = note.lon || 0.0
+		end
+
+		# if no location and no note yet then try brute force it by asking third parties
+		if !note && lat == 0.0 && lon == 0.0 && title && title.length > 0
+			lat,lon,rad = Dynamapper.geolocate(title)
+			p "attempting to geolocate note with #{title}"
+		end
+
+		# if no location and no note and no brute forcing then try parent party
+		if !note && party && lat == 0.0 && lon  == 0.0
+			lat = party.lat || 0.0
+			lon = party.lon || 0.0
+			rad = party.rad || 0.0
+		end
+
+		ActionController::Base.logger.info "Geolocated a post #{uuid} to #{lat},#{lon},#{rad} ... #{title}"
+		puts "Geolocated a post #{uuid} to #{lat},#{lon},#{rad} ... #{title}"
 
 		# update note?
 		if note
@@ -590,6 +610,9 @@ puts "aggregate::base::save_party #{title} loc=#{location} lat=#{lat} lon=#{lon}
 	def self.twitter_get_friends_most_recent_activity(parties,score=99) 
 		twitter = twitter_start
 
+                ActionController::Base.logger.info "************* AGGREGATION: GET FRIENDS ACTIVITY START #{Time.now} ************************* "
+                p "************* AGGREGATION: GET FRIENDS ACTIVITY START #{Time.now} ************************* "
+
 		parties.each do |party|
 
 			limit = self.twitter_get_remaining_hits
@@ -611,11 +634,18 @@ puts "aggregate::base::save_party #{title} loc=#{location} lat=#{lat} lon=#{lon}
 				cursor = results.next_cursor_str
 				results = twitter.friends(:user_id => party.uuid, :cursor => cursor)
 				puts "at count #{cursor} we see #{results.users[0].name}"
+                		ActionController::Base.logger.info "************* AGGREGATION: GET FRIENDS INNER SET ACTIVITY START #{Time.now} ************************* "
+                		p "************* AGGREGATION: GET FRIENDS INNER SET ACTIVITY START #{Time.now} ************************* "
 				self.twitter_deal_with_these_friends_recent_activity(party,results.users,score)
+                		ActionController::Base.logger.info "************* AGGREGATION: GET FRIENDS INNER SET ACTIVITY END #{Time.now} ************************* "
+                		p "************* AGGREGATION: GET FRIENDS INNER SET ACTIVITY END #{Time.now} ************************* "
 				count = count + results.users.length
           			ActionController::Base.logger.info "Aggregate::friends_recent_activity got #{count} people so far"
 			end	
 		end
+
+                ActionController::Base.logger.info "************* AGGREGATION: GET FRIENDS ACTIVITY END #{Time.now} ************************* "
+                p "************* AGGREGATION: GET FRIENDS ACTIVITY END #{Time.now} ************************* "
 	end
 
 =begin
@@ -654,6 +684,8 @@ XXX HERE IS WHAT WE ARE GETTING XXX
 
 			users.each do |blob|
 
+ p "SLOWNESS ABOUT TO DEAL WITH PERSON #{blob.screen_name} #{Time.now.to_f}"
+
 				# oddly this happens
 				next if !blob.status
 
@@ -682,6 +714,9 @@ XXX HERE IS WHAT WE ARE GETTING XXX
                                         :begins => Time.parse(blob.status.created_at),
                                         :score => score
                                         )
+
+ p "SLOWNESS DONE WITH PERSON #{blob.screen_name} #{Time.now.to_f}"
+
 			end
 		end
 	end

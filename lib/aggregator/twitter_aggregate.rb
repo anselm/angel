@@ -33,21 +33,26 @@ class TwitterSupport
 		if true && q[:partynames] && q[:partynames].length > 0
 			begin
 				ActionController::Base.logger.info "Query: Collecting explicitly stated parties now #{q[:partynames]} #{Time.now}"
+				p "Query: Collecting explicitly stated parties now #{q[:partynames]} #{Time.now}"
 				q[:parties] = self.twitter_update_parties_by_name_or_uuid(q[:partynames])
 			rescue Exception => e
 				ActionController::Base.logger.info "Query: Exception 1 raised! #{e.class} #{e} #{Time.now}"
+				p "Query: Exception 1 raised! #{e.class} #{e} #{Time.now}"
 				return
 			end
 			ActionController::Base.logger.info "Query: Done collecting explicitly stated parties now #{q[:partynames]} #{Time.now}"
 		elsif q[:parties] && q[:parties].length > 0
 			ActionController::Base.logger.info "Query: Collecting explicitly stated parties now #{q[:parties]} #{Time.now}"
+			p "Query: Collecting explicitly stated parties now #{q[:parties]} #{Time.now}"
 			begin
 				self.twitter_update_parties(q[:parties])
 			rescue Exception => e
 				ActionController::Base.logger.info "Query: Exception 2 raised! #{e.class} #{e} #{Time.now}"
+				p "Query: Exception 2 raised! #{e.class} #{e} #{Time.now}"
 				return
 			end
 			ActionController::Base.logger.info "Query: Done collecting explicitly stated parties #{Time.now}"
+			p "Query: Done collecting explicitly stated parties #{Time.now}"
 		end
 
 		#
@@ -56,6 +61,7 @@ class TwitterSupport
 		if q[:parties]
 			q[:parties].each do |party|
 				ActionController::Base.logger.info "Query: promoting user #{party.title} to be watched more at #{Time.now}"
+				puts "Query: promoting user #{party.title} to be watched more at #{Time.now}"
 				party.update_attributes(:score => 0)
 			end
 		end
@@ -151,17 +157,28 @@ class TwitterSupport
 
 
 		ActionController::Base.logger.info "************* AGGREGATION: STARTING AT TIME #{Time.now} ************************* "
+		p "************* AGGREGATION: STARTING AT TIME #{Time.now} ************************* "
 
 		score = 1
 		old = 1.minutes.ago
-		parties = Note.find(:all,:conditions => [ "kind = ? AND score <= ? AND updated_at < ?", Note::KIND_USER, score, old ],
+		parties = Note.find(:all,:conditions => [ "kind = ? AND score < ? AND updated_at < ?", Note::KIND_USER, score, old ],
 							:order => "updated_at ASC",
 							:limit => 100,
 							:offset => 0
 							)
+
+		if parties.length < 1
+		parties = Note.find(:all,:conditions => [ "kind = ? AND score < ?", Note::KIND_USER, score ],
+							:order => "updated_at ASC",
+							:limit => 100,
+							:offset => 0
+							)
+		end
+
 		self.aggregate_memoize({ :parties => parties } ,true)
 
 		ActionController::Base.logger.info "************ AGGREGATION: DONE AT TIME #{Time.now} ***************************** "
+		p "************ AGGREGATION: DONE AT TIME #{Time.now} ***************************** "
 
 	end
 
