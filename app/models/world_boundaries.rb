@@ -73,7 +73,7 @@ class WorldBoundaries < ActiveRecord::Base
   end
 
   def self.polygon_country(country_name)
-    country = WorldBoundaries.find(:first, :conditions => [ "name ILIKE ?", "%#{country_name}%" ] );
+    country = WorldBoundaries.find(:first, :conditions => [ "cntry_name ILIKE ?", "%#{country_name}%" ] );
     return country
   end
 
