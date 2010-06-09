@@ -1,15 +1,37 @@
 #
-# Background aggregation strategy
-# Aug 5 2009
+# Aggregation
+# May 10 2010
 #
-# 1) Aggregate
+# Basic features are
 #
-# The aggregator can periodically aggregate parties
-# The aggregator can periodically aggregate term searches
-# The aggregator can periodically aggregate term searches in a geographic area
-# The aggregator does not deal with tracing out friend networks but it will add new people it runs across.
-# The aggregator avoid collecting dupes.
-# The aggregator avoids rate limits
+#    Can periodically collect a party over and over
+#    Can collect a graph of a parties friends and remember that
+#    Can respects rate limits
+#    Can avoid collecting old posts from a party
+#    Can collect based on a search term
+#    Can collect based on geographic region and can precisely carve out on polygon boundaries a countrys tweets.
+#    Can collect the social graph of a party by last status update or by raw friend_id only
+#    Can save out hash tags and the like separately
+#    Can save out urls and expand them separately
+#
+# Things I'd like to improve - a few of which are show stoppers:
+#
+#    Massive speed up - it is just slow for some reason - Ruby?
+#    Reduce weight on synchronous queries; too much is being done there
+#    Remember softer social graph relationships of citation
+#    Separate collection of social graph away from collection of content
+#    Aggregate parties themselves more aggressively by a different partitioning strategy
+#
+# The biggest issue is that the social graph collection and friend status update collection is
+# leading to duplicate data collection.
+#
+# I would prefer to have a social graph collection strategy that collects friends by id only in volume.
+# And I would prefer that this also break friend relations as well as create them.
+# Also it would be nice to have softer scoring of friend relation strengths.
+#
+# Then I would like to collect oldest updates on a set of parties by partitioning those queries into
+# buckets. This would avoid collecting parties twice. Also I could choose to collect parties based
+# on priority - not just if oldest.
 #
 
 require 'lib/aggregator/twitter_base.rb'
@@ -131,7 +153,7 @@ class TwitterSupport
 	# Background Aggregation Strategy May 10 2010
 	#
 	# The current aggregation strategy is to
-	#	1) Aggregate persons with low scores
+	#	1) Aggregate persons with low scores (low = more important)
 	#	2) Aggregate persons with low scores if they are old
 	#	3) Aggregate persons with low scores if they are old and from oldest to youngest - guaranteeing a round robin of all
 	#
@@ -150,9 +172,22 @@ class TwitterSupport
 	#	7) Should weight people by the number of anchors they are connected to!
 
 
-	# Aggregate a handful more people ( the core aggregation algorithms request groups at a time so this is best )
-	# Call this from a cron or long lived thread
-	#
+	def self.aggregate_graph
+
+		# get old graph updates - things marked as having old graphs
+		# get friends by id only
+		# somehow mark these as off limits for general use and save them - and save the relationships
+		# it might actually be ok to do it for real - not by friend id - just infrequently however
+
+	end
+
+	def self.aggregate_activity
+
+		# magically partition queries
+
+	end
+
+
 	def self.aggregate
 
 
@@ -181,6 +216,7 @@ class TwitterSupport
 		p "************ AGGREGATION: DONE AT TIME #{Time.now} ***************************** "
 
 	end
+
 
 end
 
